@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 import { builtinCatalog, validatePage } from "@intent0/core";
 import type { ComponentCatalog, Manifest, PageSpec } from "@intent0/schema";
 import type { JsonModel } from "./llm";
@@ -44,9 +44,14 @@ export function createIntent0Handler({ manifest, catalog = builtinCatalog, model
         const reply = ResolveReply.parse(await model.complete(resolvePrompt(manifest), `Visitor said: """${text}"""`));
         const flow = reply.flowId ? enabled.find((f) => f.id === reply.flowId) : undefined;
         if (!flow || reply.confidence < 0.5) return { flowId: null, confidence: reply.confidence, prefill: {}, via: "model" };
-        const allowed = new Set(flow.steps.flatMap((s) => s.fields.map((f) => f.name)));
+        const fields = new Map(flow.steps.flatMap((s) => s.fields.map((f) => [f.name, f] as const)));
+        // Keep only stated values for real fields of this task; choices must be one of the field's options.
         const prefill = Object.fromEntries(
-          Object.entries(reply.prefill).filter(([k, v]) => allowed.has(k) && typeof v === "string" && v.trim() !== ""),
+          Object.entries(reply.prefill).filter(([k, v]) => {
+            const field = fields.get(k);
+            if (!field || typeof v !== "string" || v.trim() === "") return false;
+            return !field.options || field.options.some((o) => o.value === v);
+          }),
         );
         return { flowId: flow.id, confidence: reply.confidence, prefill, via: "model" };
       } catch (err) {

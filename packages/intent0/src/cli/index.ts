@@ -1,10 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { openAiCompatible } from "@intent0/adapter";
 import { Manifest, formatIssues, type ModelConfig } from "@intent0/schema";
 import { ask, askSecret, confirm } from "./ask";
 import { generateManifest } from "./generate";
 import { detectProject, type Project } from "./project";
 import { scanProject } from "./scan";
+import { scanAnyProject } from "./scan-generic";
+import { serve } from "./serve";
 import { MANIFEST_FILE, ensureEnvIgnored, manifestPath, patchLayout, readEnv, writeBar, writeEnv, writeManifest, writeRoute } from "./write";
 
 const PROVIDERS: Record<string, { provider: ModelConfig["provider"]; baseUrl: string; model: string }> = {
@@ -14,6 +17,7 @@ const PROVIDERS: Record<string, { provider: ModelConfig["provider"]; baseUrl: st
   openai: { provider: "openai", baseUrl: "https://api.openai.com/v1", model: "gpt-4.1-mini" },
   custom: { provider: "openai_compatible", baseUrl: "", model: "" },
 };
+const SERVE_PORT = 4100;
 
 const log = (s = "") => console.log(s);
 const bold = (s: string) => `\x1b[1m${s}\x1b[0m`;
@@ -21,9 +25,11 @@ const dim = (s: string) => `\x1b[2m${s}\x1b[0m`;
 const green = (s: string) => `\x1b[32m${s}\x1b[0m`;
 const yellow = (s: string) => `\x1b[33m${s}\x1b[0m`;
 
+type Flags = Record<string, string | true>;
+
 function parseArgs(argv: string[]) {
   const [command = "help", ...rest] = argv;
-  const flags: Record<string, string | true> = {};
+  const flags: Flags = {};
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i]!;
     if (!a.startsWith("--")) continue;
@@ -48,7 +54,7 @@ function printFlows(manifest: Manifest) {
   }
 }
 
-async function chooseModel(project: Project, flags: Record<string, string | true>) {
+async function chooseModel(project: Project, flags: Flags) {
   const env = readEnv(project);
   const providerName = String(flags.provider ?? (env.LLM_BASE_URL ? "" : (await ask("Model provider: groq, nvidia, ollama, openai or custom", "groq")))) || "custom";
   const preset = PROVIDERS[providerName] ?? PROVIDERS.custom!;
@@ -62,11 +68,23 @@ async function chooseModel(project: Project, flags: Record<string, string | true
   return { baseUrl, model, key, provider };
 }
 
-async function init(flags: Record<string, string | true>) {
-  const project = detectProject(process.cwd());
+async function siteUrl(project: Project, flags: Flags): Promise<string> {
+  const given = flags["site-url"];
+  if (typeof given === "string") return new URL(given).origin;
+  if (project.mode === "next") return "http://localhost:3000";
+  const answer = await ask("Your website's address, as people open it in the browser", "http://localhost:3000");
+  return new URL(answer).origin;
+}
+
+async function init(flags: Flags) {
+  const project = detectProject(process.cwd(), { script: Boolean(flags.script) });
   log(bold("\nintent0 init") + dim(`  ${project.name}`));
-  log(dim(`  App Router at ${project.appDir}`));
-  if (!project.hasIntent0Dependency) {
+  log(
+    project.mode === "next"
+      ? dim(`  Next.js App Router at ${project.appDir}: intent0 will be added as a route + component.`)
+      : dim("  Not a Next.js App Router project: intent0 will run as `intent0 serve` and your pages get one <script> tag."),
+  );
+  if (project.mode === "next" && !project.hasIntent0Dependency) {
     log(yellow("\n  The intent0 package isn't in this project's dependencies yet. Install it first, e.g.:"));
     log("    npm install /path/to/intent0-0.0.1.tgz\n");
   }
@@ -75,26 +93,36 @@ async function init(flags: Record<string, string | true>) {
     const again = flags.yes ? false : await confirm(`${MANIFEST_FILE} already exists. Re-scan and replace it?`);
     if (!again) {
       log(dim("  Keeping the existing manifest. Run with --force to replace it."));
-      return finishWiring(project, flags);
+      return finish(project);
     }
   }
 
   log(bold("\n1. Reading your code"));
-  const scan = scanProject(project);
-  log(`  Found ${scan.routes.length} API routes and ${scan.forms.length} files with forms.`);
-  for (const r of scan.routes) log(dim(`    ${r.methods.join(",").padEnd(10)} ${r.path}${r.checksSession ? "  (checks session)" : ""}`));
-  if (scan.routes.length === 0) throw new Error("No API routes (app/**/route.ts) found. intent0 needs backend endpoints to call.");
+  const scan = project.mode === "next" ? scanProject(project) : scanAnyProject(project);
+  log(`  Found ${scan.routes.length} backend route(s) and ${scan.forms.length} file(s) with forms.`);
+  for (const r of scan.routes) log(dim(`    ${r.methods.join(",").padEnd(10)} ${r.path}${r.checksSession ? "  (checks session)" : ""}  ${r.file}`));
+  if (scan.routes.length === 0) {
+    throw new Error(
+      "No backend routes found. intent0 needs JSON API endpoints to call (e.g. Express app.post, Laravel Route::post, Flask @app.route, Spring @PostMapping, Next.js route.ts).",
+    );
+  }
 
-  log(bold("\n2. Model"));
+  log(bold("\n2. Website and model"));
+  const url = await siteUrl(project, flags);
   const choice = await chooseModel(project, flags);
-  log(dim(`  ${choice.model} via ${choice.baseUrl}`));
+  log(dim(`  Website: ${url}`));
+  log(dim(`  Model:   ${choice.model} via ${choice.baseUrl}`));
 
   log(bold("\n3. Mapping your site into user tasks") + dim("  (this can take a minute)"));
   const { manifest, dropped } = await generateManifest(
     scan,
     {
       model: openAiCompatible({ baseUrl: choice.baseUrl, apiKey: choice.key, model: choice.model }),
-      site: { id: project.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/^(\d)/, "site_$1") || "website", name: project.name, baseUrl: String(flags["base-url-site"] ?? "http://localhost:3000") },
+      site: {
+        id: project.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/^(\d)/, "site_$1") || "website",
+        name: project.name,
+        baseUrl: url,
+      },
       modelConfig: { provider: choice.provider, model: choice.model },
     },
     log,
@@ -114,10 +142,21 @@ async function init(flags: Record<string, string | true>) {
   if (ensureEnvIgnored(project)) log(dim("  Added .env.local to .gitignore so the key isn't committed."));
   log(dim("  Saved model settings to .env.local"));
 
-  finishWiring(project, flags);
+  finish(project);
 }
 
-function finishWiring(project: Project, _flags: Record<string, string | true>) {
+function finish(project: Project) {
+  if (project.mode === "script") {
+    log(bold("\n5. Add the intent bar to your website"));
+    log("  a) Start the intent0 server in this folder (keep it running next to your website):");
+    log(`       npx intent0 serve`);
+    if (!project.hasIntent0Dependency) log(dim("       (intent0 isn't installed here, so run it from the package file: npx --package=<path to intent0-0.0.1.tgz> intent0 serve)"));
+    log("  b) Add this line to your pages (or your shared layout/footer template), just before </body>:");
+    log(green(`       <script src="http://localhost:${SERVE_PORT}/intent0.js" defer></script>`));
+    log(dim("\n  Edit intent0.manifest.json to change tasks, then run `npx intent0 approve`. The server reloads it automatically.\n"));
+    return;
+  }
+
   log(bold("\n5. Adding the intent bar"));
   const route = writeRoute(project);
   log(route ? `  Created ${route}` : dim("  Server route already exists; left as is."));
@@ -133,8 +172,7 @@ function finishWiring(project: Project, _flags: Record<string, string | true>) {
 }
 
 function approve() {
-  const project = detectProject(process.cwd());
-  const file = manifestPath(project);
+  const file = join(process.cwd(), MANIFEST_FILE);
   if (!existsSync(file)) throw new Error(`No ${MANIFEST_FILE} here. Run \`intent0 init\` first.`);
   const parsed = Manifest.safeParse(JSON.parse(readFileSync(file, "utf8")));
   if (!parsed.success) {
@@ -144,24 +182,41 @@ function approve() {
     return;
   }
   const manifest = { ...parsed.data, status: "approved" as const, revision: parsed.data.revision + 1 };
-  writeManifest(project, manifest);
+  writeManifest(detectProject(process.cwd()), manifest);
   printFlows(manifest);
-  log(green(`\nApproved revision ${manifest.revision}. Restart the dev server if it doesn't pick up the change.`));
+  log(green(`\nApproved revision ${manifest.revision}.`));
+}
+
+function startServer(flags: Flags) {
+  const root = process.cwd();
+  const manifestFile = join(root, typeof flags.manifest === "string" ? flags.manifest : MANIFEST_FILE);
+  if (!existsSync(manifestFile)) throw new Error(`No ${MANIFEST_FILE} here. Run \`intent0 init\` first.`);
+  serve({
+    root,
+    manifestFile,
+    port: Number(flags.port ?? SERVE_PORT),
+    origins: typeof flags.origin === "string" ? flags.origin.split(",").map((o) => new URL(o.trim()).origin) : [],
+    log,
+  });
 }
 
 function help() {
-  log(`${bold("intent0")}: add an intent bar to an existing Next.js site
+  log(`${bold("intent0")}: add an intent bar to an existing website
 
-  intent0 init      Read your code, map it into user tasks with a model, and add the bar
+  intent0 init      Read your code, map it into user tasks with a model, and set up the bar.
+                    Next.js App Router: adds a route + component.  Anything else: uses a <script> tag.
                     --provider groq|nvidia|ollama|openai|custom   --model <id>   --base-url <url>
-                    --yes (approve without asking)   --force (replace an existing manifest)
+                    --site-url <url>   --yes (approve without asking)   --force (replace manifest)
+                    --script (use the script tag even on a Next.js project)
   intent0 approve   Validate ${MANIFEST_FILE} after you edit it and mark it approved
+  intent0 serve     Run the intent0 server for script-tag websites (default port ${SERVE_PORT})
+                    --port <n>   --origin <url,url>  (extra website addresses allowed to use it)
 
   The model key is read from INTENT0_API_KEY or asked for, and saved only to .env.local.`);
 }
 
 const { command, flags } = parseArgs(process.argv.slice(2));
-const commands: Record<string, () => unknown> = { init: () => init(flags), approve, help };
+const commands: Record<string, () => unknown> = { init: () => init(flags), approve, serve: () => startServer(flags), help };
 
 Promise.resolve()
   .then(() => (commands[command] ?? help)())

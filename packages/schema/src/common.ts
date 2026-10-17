@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 /** Identifiers used for flows, steps, fields and outputs: lowercase snake_case. */
 export const Id = z

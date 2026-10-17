@@ -1,11 +1,16 @@
 /**
  * The layer's own CSS, injected once. Prefixed with i0- so it can't clash with the
  * site's styles, and it doesn't depend on the site using Tailwind.
- * Sites can recolour it by setting --i0-accent.
+ * Sites can recolour it by setting --intent0-accent (the script tag picks the site's own colour).
  */
 export const INTENT0_CSS = `
-.i0-layer{--i0-accent:#1e3a8a;--i0-border:#cbd5e1;--i0-muted:#64748b;font:inherit;color:#0f172a;background:#fffbeb;border-bottom:2px solid #f59e0b;text-align:left}
+.i0-layer{--i0-accent:var(--intent0-accent,#1e3a8a);--i0-border:#cbd5e1;--i0-muted:#64748b;font:inherit;color:#0f172a;background:#fffbeb;border-bottom:2px solid #f59e0b;text-align:left}
 .i0-layer *{box-sizing:border-box}
+/* Shield against the site's global element styles (e.g. input{width:100%}, label{display:block}). */
+.i0-layer input[type=checkbox]{width:auto;min-height:0;padding:0;margin:0;flex:none}
+.i0-layer label.i0-confirm,.i0-layer label.i0-check{display:flex;margin:0}
+.i0-layer label.i0-label{display:block;margin:0}
+.i0-layer p{margin-left:0;margin-right:0}
 .i0-wrap{max-width:72rem;margin:0 auto;padding:12px 16px;display:grid;gap:8px}
 .i0-row{display:flex;gap:8px}
 .i0-intent{flex:1;min-width:0;height:40px;border:1px solid var(--i0-border);border-radius:8px;padding:0 12px;font:inherit;font-size:14px;background:#fff;color:inherit}

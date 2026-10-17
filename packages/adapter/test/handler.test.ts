@@ -72,6 +72,15 @@ describe("adapter with a model", () => {
     expect(body.prefill).toEqual({ business_name: "Bakery" });
   });
 
+  it("drops a prefilled choice that isn't one of the field's options", async () => {
+    const handle = createIntent0Handler({
+      manifest,
+      model: scripted({ flowId: "new_registration", confidence: 0.9, prefill: { business_type: "sole_trader", business_name: "Bakery" } }),
+    });
+    const body = await (await handle(post({ text: "register my bakery" }), "resolve")).json();
+    expect(body.prefill).toEqual({ business_name: "Bakery" });
+  });
+
   it("never shows an invalid model page: falls back to the template after a retry", async () => {
     const bad = { flowId: "new_registration", stepId: "identity", lang: "en", title: "x", blocks: [{ component: "Script", props: {} }] };
     const handle = createIntent0Handler({ manifest, model: scripted(bad, bad) });

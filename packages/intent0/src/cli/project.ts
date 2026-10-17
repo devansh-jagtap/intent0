@@ -1,18 +1,24 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 export interface Project {
   root: string;
   name: string;
-  /** Absolute path of the Next.js app directory (app/ or src/app/). */
+  /**
+   * next   = Next.js App Router: intent0 is added as a route + React component.
+   * script = any other website (PHP, Express, Django, Spring, plain HTML, Next pages router…):
+   *          intent0 runs as `intent0 serve` next to it and the site adds one <script> tag.
+   */
+  mode: "next" | "script";
+  /** Next mode only: absolute path of app/ or src/app/. */
   appDir: string;
-  /** Where components live: src/components or components. */
+  /** Next mode only: src/components or components. */
   componentsDir: string;
   layoutFile?: string;
   typescript: boolean;
   /** tsconfig/jsconfig has the "@/*" path alias. */
   alias: boolean;
-  /** Site components the bar can reuse, as import specifiers. */
+  /** Next mode: site components the bar can reuse, as import specifiers. */
   kit: { Button?: string; Input?: string; Textarea?: string };
   hasIntent0Dependency: boolean;
 }
@@ -21,20 +27,27 @@ function firstExisting(...paths: string[]) {
   return paths.find((p) => existsSync(p));
 }
 
-/** Reads the project in `root`. Throws a readable error if it isn't a Next.js App Router project. */
-export function detectProject(root: string): Project {
+/** Reads the project in `root`. Next.js App Router projects get the built-in integration; everything else uses the script tag. */
+export function detectProject(root: string, opts: { script?: boolean } = {}): Project {
   const pkgPath = join(root, "package.json");
-  if (!existsSync(pkgPath)) throw new Error("No package.json here. Run this inside your website's project folder.");
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
-    name?: string;
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  };
+  const pkg = existsSync(pkgPath)
+    ? (JSON.parse(readFileSync(pkgPath, "utf8")) as { name?: string; dependencies?: Record<string, string>; devDependencies?: Record<string, string> })
+    : {};
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-  if (!deps.next) throw new Error("This version of intent0 supports Next.js (App Router) projects only. No 'next' dependency found.");
+  const appDir = deps.next ? firstExisting(join(root, "src", "app"), join(root, "app")) : undefined;
 
-  const appDir = firstExisting(join(root, "src", "app"), join(root, "app"));
-  if (!appDir) throw new Error("No app/ or src/app/ folder found. intent0 needs the Next.js App Router.");
+  const base: Project = {
+    root,
+    name: pkg.name ?? basename(root),
+    mode: "script",
+    appDir: "",
+    componentsDir: "",
+    typescript: existsSync(join(root, "tsconfig.json")),
+    alias: false,
+    kit: {},
+    hasIntent0Dependency: Boolean(deps.intent0),
+  };
+  if (!appDir || opts.script) return base;
 
   const srcRoot = appDir.endsWith(join("src", "app")) ? join(root, "src") : root;
   const componentsDir = join(srcRoot, "components");
@@ -54,15 +67,5 @@ export function detectProject(root: string): Project {
     }
   }
 
-  return {
-    root,
-    name: pkg.name ?? "website",
-    appDir,
-    componentsDir,
-    layoutFile,
-    typescript: existsSync(join(root, "tsconfig.json")),
-    alias,
-    kit,
-    hasIntent0Dependency: Boolean(deps.intent0),
-  };
+  return { ...base, mode: "next", appDir, componentsDir, layoutFile, alias, kit };
 }

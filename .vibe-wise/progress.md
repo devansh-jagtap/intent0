@@ -24,8 +24,16 @@
 - Claude flagged: never paste API keys in chat; store in a git-ignored env file.
 
 ## Pending decision
-- Name: Learner manually tests the CLI on their own outside website; then decide next (polish / script tag / dashboard / agents)
-- Stage: CLI implemented 2026-10-18; awaiting learner's manual test feedback.
+- Name: Learner tests CLI (Next.js and/or script tag) on own website; next candidates: dashboard, agent tools, voice/languages, codegen adapters per language
+- Stage: script tag implemented 2026-10-18; awaiting learner feedback. Learner said "I will test it, you go forward".
+
+## Step 4 (script tag) — IMPLEMENTED 2026-10-18 (uncommitted)
+- packages/intent0: dist/intent0.js IIFE (Preact compat alias, 132 KB; was 684 KB with React + zod locales — fixed by `import * as z` + Preact); mounts at top of body, endpoint defaults to script origin + /intent0, picks site accent from buttons/links (--intent0-accent), data-lang/data-accent/data-mount.
+- CLI: project detection → "next" vs "script" mode (any non-App-Router project, incl. no package.json); scan-generic.ts (Express/Koa/Fastify/Hono, Laravel, plain PHP JSON files, Flask/FastAPI, Spring, ASP.NET, Go; forms in html/php/jsp/ejs/…; skips parameterised paths); `intent0 serve` (node:http, CORS only for manifest site origin + --origin, hot-reloads manifest on change, serves intent0.js); `--site-url`, `--script`; init prints script tag + serve hint (npx --package=<tgz> when not installed).
+- Adapter: resolve prompt includes field options; prefilled choices must be valid option values (+test). SDK CSS shields against site element styles (checkbox/label).
+- Design note: per-language generated adapters (learner's earlier decision) NOT built; `intent0 serve` (Node, runs next to any backend) used instead for v0 — flagged to learner.
+- Verified on outside plain HTML + Express "Pune Clinic": init → 4 routes → 4 tasks (cancel disabled), fallbacks /register.html etc.; serve + script tag; browser: register (prefill name/phone/age → PAT-501), book (prefill patient, doctor option fixed to dr_rao after bug, date → APT-502), status GET → confirmed. Bugs found+fixed: fallback .html stripping, site CSS leaking into checkbox, select prefill ignoring options. 54 tests pass.
+- Limit: backend must return JSON; server-rendered form posts not supported.
 
 ## Step 5-lite (CLI) — IMPLEMENTED 2026-10-18 (uncommitted), learner: "next… test on a website outside with the cli command and complete flow, remove useless things"
 - packages/intent0: single installable package (tsup bundle of schema/core/adapter/react): intent0/server (createNextRoute), intent0/react (Intent0Layer), bin `intent0` (init, approve). Self-contained d.ts. `pnpm pack:intent0` → intent0-0.0.1.tgz.

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 
 /**
  * Which model the company chose. Strict on purpose: there is no field for an API key,
