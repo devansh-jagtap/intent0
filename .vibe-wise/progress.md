@@ -24,8 +24,16 @@
 - Claude flagged: never paste API keys in chat; store in a git-ignored env file.
 
 ## Pending decision
-- Name: Learner tries step 3 (bare-minimum intent bar), adds own key to apps/demo-site/.env.local; then decide polish vs next step
-- Stage: step 3 bare minimum implemented 2026-10-18; awaiting learner feedback.
+- Name: Learner manually tests the CLI on their own outside website; then decide next (polish / script tag / dashboard / agents)
+- Stage: CLI implemented 2026-10-18; awaiting learner's manual test feedback.
+
+## Step 5-lite (CLI) — IMPLEMENTED 2026-10-18 (uncommitted), learner: "next… test on a website outside with the cli command and complete flow, remove useless things"
+- packages/intent0: single installable package (tsup bundle of schema/core/adapter/react): intent0/server (createNextRoute), intent0/react (Intent0Layer), bin `intent0` (init, approve). Self-contained d.ts. `pnpm pack:intent0` → intent0-0.0.1.tgz.
+- CLI init: Next.js App Router only; static scan of route.ts (methods/inputs/outputs/session) + forms (fields/labels/select options/api calls); model maps scan → flows; schema-validated with retries; flows using non-existent route+method dropped; destructive disabled by default; review + approve prompt (--yes); writes manifest, .env.local (LLM_*), ensures .env.local ignored, route file, bar component (reuses components/ui Button/Input/Textarea when "@/*" alias), patches root layout. approve: validates + bumps revision.
+- Adapter: draft manifests serve no flows. SDK: own CSS (i0- classes, no Tailwind needed), relative same-origin URLs, Stepper from manifest.
+- Cleanup: removed demo-site unused shadcn card/checkbox/alert + boilerplate README, Tailwind @source.
+- Verified on a fresh outside Next.js app (scratchpad library-site): init found 4 routes/3 forms → 4 flows (delete auto-disabled); tsc clean; browser: join (prefill name+city → MEM-101), reserve (prefill all 3 fields → RES-102), status GET → "waiting for pickup". Bug found+fixed: non-TTY prompt hang / --provider default model. 53 tests pass.
+- Interpretation of "remove the useless things" was an assumption (flagged to learner).
 
 ## Step 3 (bare minimum) — IMPLEMENTED 2026-10-18 (uncommitted)
 - Learner was confused that step 2 built a whole site; Claude clarified demo-site = stand-in "existing website", intent bar = step 3. Learner: "do it fast… bare minimum… see basics working" → implemented.

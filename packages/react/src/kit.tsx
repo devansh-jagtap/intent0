@@ -3,7 +3,7 @@ import type { ComponentType, ReactNode } from "react";
 /**
  * The site's own basic components. With the SDK, a company passes its real Input,
  * Button, etc., so generated pages look like the rest of the site. Anything not
- * passed falls back to a plain HTML element.
+ * passed falls back to a plain HTML element styled by intent0's own CSS.
  */
 export interface Intent0Kit {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

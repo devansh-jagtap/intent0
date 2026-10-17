@@ -1,0 +1,49 @@
+{
+  "name": "intent0",
+  "version": "0.0.1",
+  "description": "Add an intent bar to an existing website: users say what they want, intent0 builds the steps live from approved actions.",
+  "type": "module",
+  "bin": {
+    "intent0": "./dist/cli.js"
+  },
+  "exports": {
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "pack:local": "tsup && pnpm pack"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@intent0/adapter": "workspace:*",
+    "@intent0/core": "workspace:*",
+    "@intent0/react": "workspace:*",
+    "@intent0/schema": "workspace:*",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "react": "19.3.0",
+    "tsup": "^9.0.0",
+    "typescript": "~5.9.3"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}

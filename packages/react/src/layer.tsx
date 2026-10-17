@@ -17,6 +17,7 @@ import {
 import { ComponentCatalog, Manifest, type PageSpec } from "@intent0/schema";
 import { resolveKit, type Intent0Kit } from "./kit";
 import { PageView } from "./renderer";
+import { INTENT0_CSS } from "./styles";
 
 type Phase =
   | { kind: "idle" }
@@ -40,6 +41,12 @@ export interface Intent0LayerProps {
   lang?: string;
 }
 
+/** Same-origin path for a manifest URL, so the layer works on any host or port. */
+const sitePath = (url: string) => {
+  const u = new URL(url);
+  return `${u.pathname}${u.search}`;
+};
+
 async function postJson(url: string, body: unknown, signal?: AbortSignal) {
   const res = await fetch(url, { method: "POST", signal, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -49,17 +56,23 @@ async function postJson(url: string, body: unknown, signal?: AbortSignal) {
 
 /** Calls the site's own backend endpoint for a step, exactly as the manifest says. */
 async function callSiteAction(method: string, url: string, body: Record<string, unknown>) {
+  const path = sitePath(url);
   let res: Response;
   if (method === "GET") {
-    const u = new URL(url, window.location.origin);
+    const u = new URL(path, window.location.origin);
     for (const [k, v] of Object.entries(body)) u.searchParams.set(k, String(v));
     res = await fetch(u, { credentials: "same-origin" });
   } else if (Object.values(body).some((v) => v instanceof File)) {
     const form = new FormData();
     for (const [k, v] of Object.entries(body)) form.set(k, v instanceof File ? v : String(v));
-    res = await fetch(url, { method, body: form, credentials: "same-origin" });
+    res = await fetch(path, { method, body: form, credentials: "same-origin" });
   } else {
-    res = await fetch(url, { method, body: JSON.stringify(body), headers: { "content-type": "application/json" }, credentials: "same-origin" });
+    res = await fetch(path, {
+      method,
+      body: JSON.stringify(body),
+      headers: { "content-type": "application/json" },
+      credentials: "same-origin",
+    });
   }
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   return { ok: res.ok, status: res.status, data };
@@ -90,11 +103,12 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
     if (phase.kind !== "idle") panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [phase.kind]);
 
-  if (!config) return null;
+  // Nothing approved yet (or config failed): show nothing, leave the site as it is.
+  if (!config || config.manifest.flows.length === 0) return null;
   const { manifest, catalog } = config;
 
   function goToFallback(flowId: string, reason: string) {
-    const url = fallbackUrl(manifest, flowId);
+    const url = sitePath(fallbackUrl(manifest, flowId));
     setPhase({ kind: "fallback", url, reason });
     setTimeout(() => (window.location.href = url), 2500);
   }
@@ -107,7 +121,7 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
     setPhase({ kind: "thinking", label: `Building “${step.title}”…` });
     const outcome = await withFallback(
       async (signal) => (await postJson(`${endpoint}/generate`, { flowId: next.flowId, stepId: step.id, lang }, signal)).page as PageSpec,
-      { timeoutMs: 20_000, fallbackUrl: fallbackUrl(manifest, next.flowId), check: (p) => validatePage(p, manifest, catalog) },
+      { timeoutMs: 25_000, fallbackUrl: fallbackUrl(manifest, next.flowId), check: (p) => validatePage(p, manifest, catalog) },
     );
     if (outcome.kind === "ok") setPhase({ kind: "step", page: outcome.value });
     else goToFallback(next.flowId, `${outcome.reason}: ${outcome.detail.join("; ")}`);
@@ -123,6 +137,7 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
     e.preventDefault();
     if (!text.trim()) return;
     setError(undefined);
+    setRun(undefined);
     setPhase({ kind: "thinking", label: "Understanding what you need…" });
     try {
       const r = await postJson(`${endpoint}/resolve`, { text });
@@ -166,7 +181,8 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
     setBusy(false);
 
     if (!res.ok) {
-      setError(typeof res.data.error === "string" ? res.data.error : "The website rejected this step.");
+      const msg = res.data.error ?? res.data.message;
+      setError(typeof msg === "string" ? msg : `The website rejected this step (${res.status}).`);
       setFieldErrors((res.data.fieldErrors as Record<string, string[]>) ?? {});
       return;
     }
@@ -192,60 +208,74 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
   const isFinalIrreversible = flow && run && flow.irreversible && run.stepIndex === flow.steps.length - 1;
 
   return (
-    <div className="i0-layer border-b-2 border-amber-400 bg-amber-50">
-      <div className="max-w-6xl mx-auto px-4 py-3 grid gap-2">
-        <form onSubmit={onIntent} className="flex gap-2">
+    <div className="i0-layer">
+      <style>{INTENT0_CSS}</style>
+      <div className="i0-wrap">
+        <form onSubmit={onIntent} className="i0-row">
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="What do you want to do? e.g. “I started a bakery, I need to register it”"
+            placeholder="What do you want to do?"
             aria-label="What do you want to do?"
-            className="flex-1 h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+            className="i0-intent"
           />
           <ui.Button type="submit" disabled={phase.kind === "thinking"}>
             Go
           </ui.Button>
         </form>
-        <div className="flex flex-wrap gap-2 text-xs items-center">
-          <span className="text-slate-500">Or choose:</span>
+        <div className="i0-chips">
+          <span className="i0-muted">Or choose:</span>
           {manifest.flows.map((f) => (
-            <button key={f.id} type="button" onClick={() => begin(f.id)} className="rounded-full bg-white border border-slate-300 px-3 py-1 hover:bg-slate-100">
+            <button key={f.id} type="button" onClick={() => begin(f.id)} className="i0-chip">
               {f.title}
             </button>
           ))}
-          <span className="ml-auto text-slate-400">intent0 · {config.mode === "model" ? "live model" : "mock model"}</span>
+          <span className="i0-badge">intent0 · {config.mode === "model" ? "live model" : "mock model"}</span>
         </div>
       </div>
 
       {phase.kind !== "idle" && (
-        <div ref={panelRef} className="max-w-3xl mx-auto px-4 pb-6">
-          <div className="bg-white border rounded-xl shadow-sm p-5 grid gap-4">
-            <div className="flex justify-between items-start gap-4">
-              <p className="text-xs uppercase tracking-wide text-slate-500">{flow?.title ?? "intent0"}</p>
-              <button type="button" onClick={close} className="text-xs text-slate-500 hover:underline">
+        <div ref={panelRef} className="i0-panelwrap">
+          <div className="i0-panel">
+            <div className="i0-head">
+              <p className="i0-eyebrow">{flow?.title ?? "intent0"}</p>
+              <button type="button" onClick={close} className="i0-link">
                 Close
               </button>
             </div>
 
-            {error && <p role="alert" className="text-sm rounded border border-red-300 bg-red-50 text-red-800 px-3 py-2">{error}</p>}
-
-            {phase.kind === "thinking" && <p className="text-sm text-slate-600 animate-pulse">{phase.label}</p>}
-
-            {phase.kind === "nomatch" && (
-              <p className="text-sm">I couldn&apos;t match that to something this website can do. Try one of the options above.</p>
+            {error && (
+              <p role="alert" className="i0-alert">
+                {error}
+              </p>
             )}
 
-            {phase.kind === "step" && step && run && (
-              <form onSubmit={onStepSubmit} className="grid gap-4" key={`${run.flowId}:${step.id}`}>
+            {phase.kind === "thinking" && <p className="i0-thinking">{phase.label}</p>}
+
+            {phase.kind === "nomatch" && (
+              <p className="i0-text">I couldn&apos;t match that to something this website can do. Try one of the options above.</p>
+            )}
+
+            {phase.kind === "step" && step && run && flow && (
+              <form onSubmit={onStepSubmit} className="i0-form" key={`${run.flowId}:${step.id}`}>
                 {isFinalIrreversible && (
-                  <label className="flex items-center gap-2 text-sm rounded border border-amber-300 bg-amber-50 px-3 py-2">
+                  <label className="i0-confirm">
                     <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
                     I confirm these details are correct and want to submit. This can&apos;t be undone.
                   </label>
                 )}
-                <PageView page={phase.page} step={step} values={run.values} fieldErrors={fieldErrors} kit={ui} busy={busy} stepIndex={run.stepIndex} />
+                <PageView
+                  page={phase.page}
+                  step={step}
+                  values={run.values}
+                  fieldErrors={fieldErrors}
+                  kit={ui}
+                  busy={busy}
+                  stepIndex={run.stepIndex}
+                  stepTitles={flow.steps.map((s) => s.title)}
+                />
                 {run.stepIndex > 0 && (
-                  <button type="button" onClick={() => showStep(goBack(run))} className="justify-self-start text-xs text-slate-500 hover:underline">
+                  <button type="button" onClick={() => showStep(goBack(run))} className="i0-link">
                     ← Back
                   </button>
                 )}
@@ -253,30 +283,26 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
             )}
 
             {phase.kind === "done" && run && flow && (
-              <div className="grid gap-3 text-sm">
-                <p className="font-semibold text-green-800">✓ {flow.title}: done</p>
-                {(flow.steps.at(-1)?.action?.returns ?? [])
-                  .map((k) => [k, run.outputs[k]] as const)
-                  .map(([k, v]) => (
-                    <p key={k}>
-                      {k.replaceAll("_", " ")}: <b className="font-mono">{String(v)}</b>
-                    </p>
-                  ))}
+              <div className="i0-done">
+                <p className="i0-ok">✓ {flow.title}: done</p>
+                {(flow.steps.at(-1)?.action?.returns ?? []).map((k) => (
+                  <p key={k} className="i0-text">
+                    {k.replaceAll("_", " ")}: <b className="i0-mono">{String(run.outputs[k])}</b>
+                  </p>
+                ))}
                 {flow.alsoNeed?.approved && (
-                  <div className="rounded border-l-4 border-amber-400 bg-amber-50 px-3 py-2">
-                    <p className="font-semibold">You may also need</p>
-                    <p>{flow.alsoNeed.text}</p>
+                  <div className="i0-also">
+                    <p className="i0-h3">You may also need</p>
+                    <p className="i0-text">{flow.alsoNeed.text}</p>
                   </div>
                 )}
               </div>
             )}
 
             {phase.kind === "fallback" && (
-              <p className="text-sm">
+              <p className="i0-text">
                 I couldn&apos;t build this page ({phase.reason}). Taking you to the regular page…{" "}
-                <a href={phase.url} className="underline">
-                  Go now
-                </a>
+                <a href={phase.url}>Go now</a>
               </p>
             )}
           </div>

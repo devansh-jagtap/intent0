@@ -7,3 +7,7 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Local intent0 package builds
+packages/intent0/dist/
+*.tgz

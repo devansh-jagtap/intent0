@@ -5,10 +5,22 @@
   "scripts": {
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "check": "turbo run typecheck test"
+    "check": "turbo run typecheck test",
+    "pack:intent0": "pnpm --filter intent0 pack:local"
   },
   "devDependencies": {
+    "@intent0/adapter": "workspace:*",
+    "@intent0/core": "workspace:*",
+    "@intent0/react": "workspace:*",
+    "@intent0/schema": "workspace:*",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "react": "19.3.0",
+    "tsup": "^9.0.0",
     "turbo": "^2.11.8",
-    "typescript": "^7.0.2"
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
   }
 }

@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-/* Let Tailwind see the classes used by the intent0 SDK. */
-@source "../../../../packages/react/src";
 
 @custom-variant dark (&:is(.dark *));
 

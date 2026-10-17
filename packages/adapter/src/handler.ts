@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { builtinCatalog, findFlow, validatePage } from "@intent0/core";
+import { builtinCatalog, validatePage } from "@intent0/core";
 import type { ComponentCatalog, Manifest, PageSpec } from "@intent0/schema";
 import type { JsonModel } from "./llm";
 import { mockResolve, templatePage } from "./mock";
@@ -28,7 +28,8 @@ const json = (data: unknown, status = 200) => Response.json(data, { status });
  */
 export function createIntent0Handler({ manifest, catalog = builtinCatalog, model }: AdapterOptions) {
   const pageCache = new Map<string, PageSpec>();
-  const enabled = manifest.flows.filter((f) => f.enabled);
+  // Only an approved manifest is served. A draft (not yet reviewed) shows nothing to users.
+  const enabled = manifest.status === "approved" ? manifest.flows.filter((f) => f.enabled) : [];
   // What the browser gets: approved, enabled flows only; no model settings.
   const publicConfig = {
     manifest: { ...manifest, model: { provider: manifest.model.provider, model: "hidden" }, flows: enabled },
@@ -37,6 +38,7 @@ export function createIntent0Handler({ manifest, catalog = builtinCatalog, model
   };
 
   async function resolve(text: string) {
+    if (enabled.length === 0) return { flowId: null, confidence: 0, prefill: {}, via: "none" };
     if (model) {
       try {
         const reply = ResolveReply.parse(await model.complete(resolvePrompt(manifest), `Visitor said: """${text}"""`));
@@ -55,8 +57,8 @@ export function createIntent0Handler({ manifest, catalog = builtinCatalog, model
   }
 
   async function generate(flowId: string, stepId: string, lang: string): Promise<Response> {
-    const flow = findFlow(manifest, flowId);
-    if (!flow || !flow.enabled) return json({ error: "unknown or disabled flow" }, 404);
+    const flow = enabled.find((f) => f.id === flowId);
+    if (!flow) return json({ error: "unknown, disabled or unapproved flow" }, 404);
     const stepIndex = flow.steps.findIndex((s) => s.id === stepId);
     if (stepIndex === -1) return json({ error: "unknown step" }, 404);
 

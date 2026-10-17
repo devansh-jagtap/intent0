@@ -10,22 +10,37 @@ interface RenderContext {
   busy: boolean;
   /** The real current step. The Stepper always shows this, not whatever the model wrote. */
   stepIndex: number;
+  /** All step titles of the flow, from the manifest. */
+  stepTitles: string[];
 }
 
-const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+const str = (v: unknown) => (typeof v === "string" && v.trim() !== "" ? v : undefined);
 const num = (v: unknown) => (typeof v === "number" ? v : undefined);
 
-function FieldShell({ field, label, help, errors, children }: { field: Field; label?: string; help?: string; errors?: string[]; children: ReactNode }) {
+function FieldShell({
+  field,
+  label,
+  help,
+  errors,
+  children,
+}: {
+  field: Field;
+  label?: string;
+  help?: string;
+  errors?: string[];
+  children: ReactNode;
+}) {
+  const hint = help ?? field.help;
   return (
-    <div className="grid gap-1">
-      <label htmlFor={`i0-${field.name}`} className="text-sm font-medium">
+    <div className="i0-field">
+      <label htmlFor={`i0-${field.name}`} className="i0-label">
         {label ?? field.label}
-        {field.required && <span className="text-red-600"> *</span>}
+        {field.required && <span className="i0-req"> *</span>}
       </label>
       {children}
-      {(help ?? field.help) && <p className="text-xs text-slate-500">{help ?? field.help}</p>}
+      {hint && <p className="i0-help">{hint}</p>}
       {errors?.map((e) => (
-        <p key={e} className="text-xs text-red-700">
+        <p key={e} className="i0-error">
           {e}
         </p>
       ))}
@@ -33,31 +48,28 @@ function FieldShell({ field, label, help, errors, children }: { field: Field; la
   );
 }
 
+const INPUT_TYPE: Partial<Record<Field["type"], string>> = { email: "email", phone: "tel", number: "number" };
+
 function renderField(node: PageNode, field: Field, ctx: RenderContext): ReactNode {
   const { Input, Textarea } = ctx.kit;
   const id = `i0-${field.name}`;
   const initial = str(ctx.values[field.name]);
-  const common = { id, name: field.name, required: field.required, defaultValue: initial, "aria-invalid": Boolean(ctx.fieldErrors[field.name]) || undefined };
+  const invalid = Boolean(ctx.fieldErrors[field.name]) || undefined;
+  const common = { id, name: field.name, required: field.required, defaultValue: initial, "aria-invalid": invalid };
   const label = str(node.props.label);
   const help = str(node.props.help);
 
   let control: ReactNode;
   switch (node.component) {
     case "TextField":
-      control = (
-        <Input
-          {...common}
-          type={field.type === "email" ? "email" : field.type === "phone" ? "tel" : field.type === "number" ? "number" : "text"}
-          placeholder={str(node.props.placeholder)}
-        />
-      );
+      control = <Input {...common} type={INPUT_TYPE[field.type] ?? "text"} placeholder={str(node.props.placeholder)} />;
       break;
     case "TextArea":
       control = <Textarea {...common} rows={3} />;
       break;
     case "SelectField":
       control = (
-        <select {...common} defaultValue={initial ?? ""} className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm">
+        <select {...common} defaultValue={initial ?? ""} className="i0-select">
           <option value="" disabled>
             Select…
           </option>
@@ -80,7 +92,7 @@ function renderField(node: PageNode, field: Field, ctx: RenderContext): ReactNod
       break;
     case "Checkbox":
       return (
-        <label key={field.name} className="flex items-center gap-2 text-sm">
+        <label className="i0-check">
           <input type="checkbox" name={field.name} value="true" required={field.required} /> {label ?? field.label}
         </label>
       );
@@ -88,7 +100,7 @@ function renderField(node: PageNode, field: Field, ctx: RenderContext): ReactNod
       return null;
   }
   return (
-    <FieldShell key={field.name} field={field} label={label} help={help} errors={ctx.fieldErrors[field.name]}>
+    <FieldShell field={field} label={label} help={help} errors={ctx.fieldErrors[field.name]}>
       {control}
     </FieldShell>
   );
@@ -103,38 +115,33 @@ function renderNode(node: PageNode, ctx: RenderContext, key: string): ReactNode 
   switch (node.component) {
     case "Heading":
       return (num(p.level) ?? 2) <= 2 ? (
-        <h2 key={key} className="text-lg font-semibold">{str(p.text)}</h2>
+        <h2 key={key} className="i0-h2">{str(p.text)}</h2>
       ) : (
-        <h3 key={key} className="font-semibold">{str(p.text)}</h3>
+        <h3 key={key} className="i0-h3">{str(p.text)}</h3>
       );
     case "Text":
-      return <p key={key} className="text-sm text-slate-700">{str(p.text)}</p>;
+      return <p key={key} className="i0-text">{str(p.text)}</p>;
     case "Notice":
-      return <p key={key} className="text-sm rounded border border-amber-300 bg-amber-50 px-3 py-2">{str(p.text)}</p>;
+      return <p key={key} className="i0-notice">{str(p.text)}</p>;
     case "Group":
       return (
-        <fieldset key={key} className="grid gap-4">
-          {str(p.label) && <legend className="text-sm font-semibold mb-2">{str(p.label)}</legend>}
+        <fieldset key={key} className="i0-group">
+          {str(p.label) && <legend className="i0-legend">{str(p.label)}</legend>}
           {node.children?.map((c, i) => renderNode(c, ctx, `${key}.${i}`))}
         </fieldset>
       );
-    case "Stepper": {
-      const steps = Array.isArray(p.steps) ? (p.steps as string[]) : [];
-      const current = ctx.stepIndex;
+    case "Stepper":
+      // Titles and position come from the manifest and the flow runner, not the model.
       return (
-        <ol key={key} className="flex flex-wrap gap-2 text-xs">
-          {steps.map((s, i) => (
-            <li
-              key={s}
-              className={`rounded-full px-2 py-1 ${i === current ? "bg-primary text-primary-foreground" : i < current ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-500"}`}
-            >
-              {i < current ? "✓ " : ""}
+        <ol key={key} className="i0-steps">
+          {ctx.stepTitles.map((s, i) => (
+            <li key={s} className="i0-step" data-state={i === ctx.stepIndex ? "current" : i < ctx.stepIndex ? "done" : "todo"}>
+              {i < ctx.stepIndex ? "✓ " : ""}
               {s}
             </li>
           ))}
         </ol>
       );
-    }
     case "SubmitButton": {
       const { Button } = ctx.kit;
       return (
@@ -152,5 +159,5 @@ function renderNode(node: PageNode, ctx: RenderContext, key: string): ReactNode 
 
 /** Draws a validated page spec. Only catalog components exist here; unknown ones render nothing. */
 export function PageView({ page, ...ctx }: { page: PageSpec } & RenderContext) {
-  return <div className="grid gap-4">{page.blocks.map((b, i) => renderNode(b, ctx, String(i)))}</div>;
+  return <div className="i0-page">{page.blocks.map((b, i) => renderNode(b, ctx, String(i)))}</div>;
 }

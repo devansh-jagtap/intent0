@@ -41,6 +41,21 @@ describe("adapter without a model (mock mode)", () => {
   });
 });
 
+describe("draft manifests", () => {
+  const draft = Manifest.parse({ ...example, status: "draft" });
+  const handle = createIntent0Handler({ manifest: draft, model: null });
+
+  it("serve no flows until approved", async () => {
+    const body = await (await handle(new Request("http://x/intent0"), "config")).json();
+    expect(body.manifest.flows).toEqual([]);
+  });
+
+  it("refuse to generate pages", async () => {
+    const res = await handle(post({ flowId: "new_registration", stepId: "identity" }), "generate");
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("adapter with a model", () => {
   it("ignores a model that invents a flow", async () => {
     const handle = createIntent0Handler({ manifest, model: scripted({ flowId: "transfer_money", confidence: 0.99, prefill: {} }) });

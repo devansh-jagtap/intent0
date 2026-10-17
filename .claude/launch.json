@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@intent0/demo-site", "dev"],
       "port": 3000
+    },
+    {
+      "name": "outside-test-site",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--prefix", "C:/Users/devan/AppData/Local/Temp/claude/C--Users-devan-OneDrive-Desktop-intent0/d892526f-03a6-46b2-9ec1-fdff8f940a17/scratchpad/outside/library-site", "next", "dev", "C:/Users/devan/AppData/Local/Temp/claude/C--Users-devan-OneDrive-Desktop-intent0/d892526f-03a6-46b2-9ec1-fdff8f940a17/scratchpad/outside/library-site", "--port", "3100"],
+      "port": 3100
     }
   ]
 }
