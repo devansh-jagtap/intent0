@@ -24,9 +24,16 @@
 - Claude flagged: never paste API keys in chat; store in a git-ignored env file.
 
 ## Pending decision
-- Name: Step 1 implementation — monorepo skeleton + packages/schema + packages/core + hand-written example manifest + tests
-- Stage: APPROVED 2026-10-17 — learner: "use this repo… you write, I will review and check the implementations". Implementing.
-- Answers: stay in the OneDrive repo; Claude writes the example manifest, learner reviews; .vibe-wise/ gitignore not answered → left out of .gitignore.
+- Name: Learner review of step 1, then step 2 (demo host site — learner said they will build it)
+- Stage: awaiting learner review of step 1 implementation; step 2 approach not yet discussed.
+
+## Step 1 — IMPLEMENTED 2026-10-17 (not committed)
+- Monorepo (pnpm 12 workspaces + turbo 2.11), TypeScript 7.0, Zod 4.6, Vitest 5.0.
+- packages/schema: Manifest/Flow/Step/Field/Action, ModelConfig (strict, no key field), ComponentCatalog, PageSpec/PageNode (strict, no URLs).
+- packages/core: validatePage, flow runner (startFlow/completeStep/goBack, no jump), withFallback, resolveAction/fallbackUrl, builtinCatalog.
+- examples/enterprise-portal.manifest.json written by Claude (learner to review).
+- Verified: `pnpm check` → typecheck passed, 32 tests passed (schema 7, core 25).
+- Answers: stayed in the OneDrive repo; .vibe-wise/ not added to .gitignore (question unanswered).
 
 ## v1 architecture — treated as CONFIRMED 2026-10-17
 - Learner rejected the confirmation picker and said "let's start making, we will correct things on the go" — recorded as confirmation of the architecture with BYOK + generated adapters and the listed proposed additions, open to later correction.

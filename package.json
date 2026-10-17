@@ -6,5 +6,9 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "check": "turbo run typecheck test"
+  },
+  "devDependencies": {
+    "turbo": "^2.11.8",
+    "typescript": "^7.0.2"
   }
 }

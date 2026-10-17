@@ -51,8 +51,14 @@ Agents: approved flows exposed as tools ──► same manifest checks
 - Model's runtime role: interpret intent, pre-fill fields, arrange approved components, phrase notes. Not routing.
 - No links to external sites; crawl code, not production user data (raised by Claude; not formally decided).
 
+## Implemented (step 1, 2026-10-17)
+- packages/schema/src: common.ts (Id, SitePath, formatIssues), model.ts, manifest.ts, catalog.ts, page.ts
+- packages/core/src: lookup.ts (resolveAction, fallbackUrl), validate-page.ts, flow-runner.ts, fallback.ts, builtin-catalog.ts
+- examples/enterprise-portal.manifest.json (4 flows; cancel_registration disabled)
+
 ## Build and Deployment
-Repository contains a single initial commit; no build configuration yet.
+- pnpm 12 workspace (`packages/*`, `apps/*`), turbo 2.11; TypeScript 7, Zod 4, Vitest 5.
+- `pnpm check` runs typecheck + tests across packages. Packages export TS source directly (no build step yet).
 
 ## Unknowns
 - First build / wedge and the 2-minute demo.

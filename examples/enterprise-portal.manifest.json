@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 1,
+  "site": {
+    "id": "enterprise_portal_demo",
+    "name": "Enterprise Services Portal (demo)",
+    "baseUrl": "http://localhost:3000"
+  },
+  "revision": 1,
+  "status": "approved",
+  "model": {
+    "provider": "groq",
+    "model": "llama-3.3-70b-versatile"
+  },
+  "flows": [
+    {
+      "id": "new_registration",
+      "title": "Register a new enterprise",
+      "description": "Register a new small business and receive a registration reference.",
+      "examples": [
+        "I want to register my new business",
+        "I started a bakery from home, I need to register it",
+        "new enterprise registration"
+      ],
+      "enabled": true,
+      "irreversible": true,
+      "auth": "public",
+      "fallbackPath": "/register/new",
+      "steps": [
+        {
+          "id": "identity",
+          "title": "Verify identity",
+          "kind": "verify",
+          "fields": [
+            { "name": "aadhaar_number", "label": "Aadhaar number", "type": "text", "pattern": "^\\d{12}$" },
+            { "name": "name_on_aadhaar", "label": "Name as on Aadhaar", "type": "text" }
+          ],
+          "action": {
+            "method": "POST",
+            "path": "/api/registration/otp/send",
+            "sends": ["aadhaar_number", "name_on_aadhaar"],
+            "returns": ["otp_request_id"]
+          }
+        },
+        {
+          "id": "verify_otp",
+          "title": "Enter the OTP",
+          "kind": "verify",
+          "needs": ["otp_request_id"],
+          "fields": [
+            { "name": "otp", "label": "OTP sent to your registered mobile", "type": "otp", "pattern": "^\\d{6}$" }
+          ],
+          "action": {
+            "method": "POST",
+            "path": "/api/registration/otp/verify",
+            "sends": ["otp_request_id", "otp"],
+            "returns": ["applicant_token"]
+          }
+        },
+        {
+          "id": "business_details",
+          "title": "Business details",
+          "kind": "form",
+          "needs": ["applicant_token"],
+          "fields": [
+            {
+              "name": "business_type",
+              "label": "Type of business",
+              "type": "select",
+              "options": [
+                { "value": "proprietorship", "label": "Proprietorship" },
+                { "value": "partnership", "label": "Partnership" },
+                { "value": "llp", "label": "Limited Liability Partnership" },
+                { "value": "private_limited", "label": "Private Limited Company" }
+              ]
+            },
+            { "name": "business_name", "label": "Business name", "type": "text" },
+            { "name": "activity_description", "label": "What does your business do?", "type": "textarea" },
+            { "name": "activity_code", "label": "Activity code", "type": "text", "help": "Suggested from your description. Please confirm." },
+            { "name": "pan", "label": "PAN", "type": "text", "pattern": "^[A-Z]{5}[0-9]{4}[A-Z]$" }
+          ],
+          "action": {
+            "method": "POST",
+            "path": "/api/registration/details",
+            "sends": ["applicant_token", "business_type", "business_name", "activity_description", "activity_code", "pan"],
+            "returns": ["draft_id"]
+          }
+        },
+        {
+          "id": "review_submit",
+          "title": "Review and submit",
+          "kind": "review",
+          "needs": ["draft_id"],
+          "fields": [
+            { "name": "final_otp", "label": "Final OTP", "type": "otp", "pattern": "^\\d{6}$" }
+          ],
+          "action": {
+            "method": "POST",
+            "path": "/api/registration/submit",
+            "sends": ["draft_id", "final_otp"],
+            "returns": ["reference_number"]
+          }
+        }
+      ],
+      "alsoNeed": {
+        "text": "Depending on your business, you might also need registrations from other departments, for example a food licence for food businesses or GST registration above the turnover limit. Use only official government websites ending in .gov.in.",
+        "approved": true
+      }
+    },
+    {
+      "id": "update_details",
+      "title": "Update enterprise details",
+      "description": "Change the address or contact details of a registered enterprise.",
+      "examples": ["update my business address", "change my registered mobile number"],
+      "enabled": true,
+      "irreversible": false,
+      "auth": "signed_in",
+      "fallbackPath": "/update",
+      "steps": [
+        {
+          "id": "send_otp",
+          "title": "Confirm it's you",
+          "kind": "verify",
+          "fields": [
+            { "name": "reference_number", "label": "Registration reference", "type": "text" }
+          ],
+          "action": {
+            "method": "POST",
+            "path": "/api/update/otp/send",
+            "sends": ["reference_number"],
+            "returns": ["otp_request_id"]
+          }
+        },
+        {
+          "id": "verify_update_otp",
+          "title": "Enter the OTP",
+          "kind": "verify",
+          "needs": ["otp_request_id"],
+          "fields": [
+            { "name": "update_otp", "label": "OTP", "type": "otp", "pattern": "^\\d{6}$" }
+          ],
+          "action": {
+            "method": "POST",
+            "path": "/api/update/otp/verify",
+            "sends": ["otp_request_id", "update_otp"],
+            "returns": ["update_token"]
+          }
+        },
+        {
+          "id": "new_details",
+          "title": "New details",
+          "kind": "form",
+          "needs": ["update_token"],
+          "fields": [
+            { "name": "new_address", "label": "New address", "type": "textarea", "required": false },
+            { "name": "new_mobile", "label": "New mobile number", "type": "phone", "required": false, "pattern": "^\\d{10}$" },
+            { "name": "address_proof", "label": "Address proof", "type": "file", "required": false }
+          ],
+          "action": {
+            "method": "POST",
+            "path": "/api/update/submit",
+            "sends": ["update_token", "new_address", "new_mobile", "address_proof"],
+            "returns": ["update_request_id"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "print_certificate",
+      "title": "Print registration certificate",
+      "description": "Download the certificate of a registered enterprise.",
+      "examples": ["print my certificate", "download registration certificate"],
+      "enabled": true,
+      "irreversible": false,
+      "auth": "signed_in",
+      "fallbackPath": "/print",
+      "steps": [
+        {
+          "id": "lookup",
+          "title": "Find your certificate",
+          "kind": "form",
+          "fields": [
+            { "name": "certificate_reference", "label": "Registration reference", "type": "text" }
+          ],
+          "action": {
+            "method": "GET",
+            "path": "/api/certificate",
+            "sends": ["certificate_reference"],
+            "returns": ["certificate_id"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "cancel_registration",
+      "title": "Cancel registration",
+      "description": "Permanently cancel an enterprise registration.",
+      "examples": ["cancel my registration"],
+      "enabled": false,
+      "irreversible": true,
+      "auth": "signed_in",
+      "fallbackPath": "/cancel",
+      "steps": [
+        {
+          "id": "confirm_cancel",
+          "title": "Confirm cancellation",
+          "kind": "review",
+          "fields": [
+            { "name": "cancel_reference", "label": "Registration reference", "type": "text" }
+          ],
+          "action": {
+            "method": "POST",
+            "path": "/api/registration/cancel",
+            "sends": ["cancel_reference"],
+            "returns": ["cancellation_id"]
+          }
+        }
+      ]
+    }
+  ]
+}
