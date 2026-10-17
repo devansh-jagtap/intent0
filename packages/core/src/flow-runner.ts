@@ -1,5 +1,5 @@
 import type { Manifest, Step } from "@intent0/schema";
-import { findFlow } from "./lookup.js";
+import { findFlow } from "./lookup";
 
 /** Where a user is in a flow. Plain data, so it can be stored and resumed. */
 export interface FlowRun {

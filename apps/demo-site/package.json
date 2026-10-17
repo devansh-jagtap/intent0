@@ -7,11 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@intent0/adapter": "workspace:*",
+    "@intent0/react": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.0",
     "lucide-react": "^1.58.0",

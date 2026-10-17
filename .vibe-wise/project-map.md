@@ -56,6 +56,11 @@ Agents: approved flows exposed as tools ──► same manifest checks
 - packages/core/src: lookup.ts (resolveAction, fallbackUrl), validate-page.ts, flow-runner.ts, fallback.ts, builtin-catalog.ts
 - examples/enterprise-portal.manifest.json (4 flows; cancel_registration disabled)
 
+## Implemented (step 2, 2026-10-18)
+- apps/demo-site (Next.js 16.4, Cache Components): maze pages, traditional multi-page forms (src/app/register/new, update, print, cancel, login), mock APIs under src/app/api matching the manifest, backend helpers in src/lib/demo (store, http, rules, activity-codes), shadcn components in src/components/ui, portal chrome in src/components/portal.
+- test/contract.test.ts: manifest ↔ backend contract via @intent0/core (dev dependency only; site has no intent0 runtime code).
+- .claude/launch.json: "demo-site" dev server on port 3000.
+
 ## Build and Deployment
 - pnpm 12 workspace (`packages/*`, `apps/*`), turbo 2.11; TypeScript 7, Zod 4, Vitest 5.
 - `pnpm check` runs typecheck + tests across packages. Packages export TS source directly (no build step yet).

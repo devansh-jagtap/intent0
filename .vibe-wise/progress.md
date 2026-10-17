@@ -24,8 +24,25 @@
 - Claude flagged: never paste API keys in chat; store in a git-ignored env file.
 
 ## Pending decision
-- Name: Learner review of step 1, then step 2 (demo host site — learner said they will build it)
-- Stage: awaiting learner review of step 1 implementation; step 2 approach not yet discussed.
+- Name: Learner tries step 3 (bare-minimum intent bar), adds own key to apps/demo-site/.env.local; then decide polish vs next step
+- Stage: step 3 bare minimum implemented 2026-10-18; awaiting learner feedback.
+
+## Step 3 (bare minimum) — IMPLEMENTED 2026-10-18 (uncommitted)
+- Learner was confused that step 2 built a whole site; Claude clarified demo-site = stand-in "existing website", intent bar = step 3. Learner: "do it fast… bare minimum… see basics working" → implemented.
+- packages/adapter: createIntent0Handler (config/resolve/generate), OpenAI-compatible client via env (LLM_BASE_URL/API_KEY/MODEL), mock mode (keyword resolve + template pages) when no key, model output validated + 1 retry, page cache; never receives form data.
+- packages/react: Intent0Layer (intent bar + goal chips + live step pages), renderer using site kit (shadcn Input/Textarea/Button), submits directly to site API via resolveAction, irreversible confirmation, fallback redirect, done + alsoNeed.
+- demo-site wiring: src/app/intent0/[action]/route.ts, src/components/intent0-bar.tsx, layout, transpilePackages, Tailwind @source, .env.example.
+- Fix: removed ".js" from relative imports in packages (Turbopack can't map .js→.ts).
+- Verified: 50 tests pass (adapter 9 new), all typecheck; browser: "I opened a small bakery and want to register my business" → new_registration → 4 generated steps → DEMO-2026-000002 via real backend → also-need note. Mock model only; real model untested (no key yet).
+- Not built: task cards, script tag, CLI, dashboard, agents.
+- Fix 2026-10-18 (learner: "not able to build the page, only redirecting"): cause = Groq decommissioned llama-3.3-70b-versatile (404 model_not_found). Changed LLM_MODEL to openai/gpt-oss-120b in .env.local/.env.example (key untouched, never printed). Adapter now falls back model → template page → original page (was model → original page) — Claude's change, flagged to learner; real error surfaced in logs/response. Stepper current step now set by SDK, not model. Verified live: Hinglish request resolved with prefill; all 4 steps generated via model; browser shows "live model" page. 51 tests pass.
+
+## Step 2 — IMPLEMENTED 2026-10-18 (pages/form-kit uncommitted; learner committed backend part as ce75c33)
+- apps/demo-site: Next.js 16.4 (Cache Components on), React 19.3, Tailwind 4, shadcn/ui (base-nova style, @base-ui). Claude scaffolded + wrote it (learner approved "ok next step"; learner had earlier said "you write, I review").
+- Maze pages: / → /services → /services/enterprises → /services/enterprises/registration → /register/new (4-page form). Also /update, /print, /cancel, /login.
+- Mock backend: all manifest endpoints; in-memory store on globalThis; OTP 123456; mock session cookie; zod input rules; ownership checks.
+- Verified: pnpm check → 41 tests (schema 7, core 25, demo-site 9 contract tests incl. full flows via core flow runner + resolveAction), typecheck + lint clean; manual browser run: registration → DEMO-2026-000002, login redirect, certificate lookup.
+- Step 1 review: learner said "everything is correct for now".
 
 ## Step 1 — IMPLEMENTED 2026-10-17 (not committed)
 - Monorepo (pnpm 12 workspaces + turbo 2.11), TypeScript 7.0, Zod 4.6, Vitest 5.0.

@@ -178,6 +178,12 @@ importers:
       '@base-ui/react':
         specifier: ^1.9.0
         version: 1.9.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@intent0/adapter':
+        specifier: workspace:*
+        version: link:../../packages/adapter
+      '@intent0/react':
+        specifier: workspace:*
+        version: link:../../packages/react
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -240,6 +246,25 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@20.19.43)(vite@8.3.4(@types/node@20.19.43)(jiti@2.7.0))
 
+  packages/adapter:
+    dependencies:
+      '@intent0/core':
+        specifier: workspace:*
+        version: link:../core
+      '@intent0/schema':
+        specifier: workspace:*
+        version: link:../schema
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@20.19.43)(vite@8.3.4(@types/node@20.19.43)(jiti@2.7.0))
+
   packages/core:
     dependencies:
       '@intent0/schema':
@@ -252,6 +277,25 @@ importers:
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(vite@8.3.4)
+
+  packages/react:
+    dependencies:
+      '@intent0/core':
+        specifier: workspace:*
+        version: link:../core
+      '@intent0/schema':
+        specifier: workspace:*
+        version: link:../schema
+    devDependencies:
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      react:
+        specifier: 19.3.0
+        version: 19.3.0
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
 
   packages/schema:
     dependencies:

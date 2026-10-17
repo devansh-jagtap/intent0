@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { builtinCatalog, fallbackUrl, resolveAction, validatePage, withFallback } from "../src/index.js";
-import { manifest, validIdentityPage } from "./fixtures.js";
+import { builtinCatalog, fallbackUrl, resolveAction, validatePage, withFallback } from "../src/index";
+import { manifest, validIdentityPage } from "./fixtures";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const original = fallbackUrl(manifest, "new_registration");

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FieldType } from "./manifest.js";
+import { FieldType } from "./manifest";
 
 export const PropType = z.enum(["string", "number", "boolean", "string[]"]);
 export type PropType = z.infer<typeof PropType>;

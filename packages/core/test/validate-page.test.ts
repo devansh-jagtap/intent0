@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { builtinCatalog, validatePage } from "../src/index.js";
-import { manifest, validIdentityPage } from "./fixtures.js";
+import { builtinCatalog, validatePage } from "../src/index";
+import { manifest, validIdentityPage } from "./fixtures";
 
 const page = () => structuredClone(validIdentityPage);
 const errorsOf = (input: unknown) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Manifest, ModelConfig, PageSpec, formatIssues } from "../src/index.js";
+import { Manifest, ModelConfig, PageSpec, formatIssues } from "../src/index";
 import example from "../../../examples/enterprise-portal.manifest.json";
 
 const clone = <T>(value: T): T => structuredClone(value);

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Id } from "./common.js";
+import { Id } from "./common";
 
 /**
  * One node of a generated page: which catalog component to show, its props,

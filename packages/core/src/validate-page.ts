@@ -7,7 +7,7 @@ import {
   type PageNode,
   type PropType,
 } from "@intent0/schema";
-import { findFlow, findStep } from "./lookup.js";
+import { findFlow, findStep } from "./lookup";
 
 export type ValidationResult = { ok: true; page: PageSpec } | { ok: false; errors: string[] };
 

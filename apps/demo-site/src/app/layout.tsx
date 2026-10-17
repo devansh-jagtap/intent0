@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PortalHeader } from "@/components/portal/header";
 import { PortalFooter } from "@/components/portal/footer";
+import { Intent0Bar } from "@/components/intent0-bar";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Demo website for intent0 development. Fictional portal. The OTP is always <b>123456</b>.
         </div>
         <PortalHeader />
+        <Intent0Bar />
         <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-6">{children}</main>
         <PortalFooter />
       </body>

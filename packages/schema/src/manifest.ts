@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { Id, SitePath } from "./common.js";
-import { ModelConfig } from "./model.js";
+import { Id, SitePath } from "./common";
+import { ModelConfig } from "./model";
 
 export const FieldType = z.enum([
   "text",

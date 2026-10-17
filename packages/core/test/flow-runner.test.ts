@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FlowError, completeStep, currentStep, goBack, startFlow } from "../src/index.js";
-import { manifest } from "./fixtures.js";
+import { FlowError, completeStep, currentStep, goBack, startFlow } from "../src/index";
+import { manifest } from "./fixtures";
 
 const identity = { values: { aadhaar_number: "123412341234", name_on_aadhaar: "Meena Patil" } };
 
