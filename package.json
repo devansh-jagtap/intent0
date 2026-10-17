@@ -1,0 +1,10 @@
+{
+  "name": "intent0",
+  "private": true,
+  "packageManager": "pnpm@12.4.2",
+  "scripts": {
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "check": "turbo run typecheck test"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.turbo/
+coverage/
+
+# Secrets: API keys live only in env files, never in git
+.env
+.env.*
+!.env.example
