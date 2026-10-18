@@ -28,3 +28,16 @@ export const PageSpec = z.strictObject({
   blocks: z.array(PageNode).min(1),
 });
 export type PageSpec = z.infer<typeof PageSpec>;
+
+/**
+ * A generated information page (docs, how-to, answers), built only from Site Memory.
+ * Paragraphs must cite the sections they come from; code is placed by reference to a
+ * verbatim code block, so the model can never write code itself.
+ */
+export const ContentPage = z.strictObject({
+  kind: z.literal("content"),
+  lang: z.string().min(2).max(10),
+  title: z.string().min(1).max(200),
+  blocks: z.array(PageNode).min(1),
+});
+export type ContentPage = z.infer<typeof ContentPage>;

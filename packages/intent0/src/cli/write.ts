@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
-import type { Manifest } from "@intent0/schema";
+import type { Manifest, SiteMemory } from "@intent0/schema";
 import type { Project } from "./project";
 
 export const MANIFEST_FILE = "intent0.manifest.json";
@@ -16,20 +16,41 @@ export function writeManifest(project: Project, manifest: Manifest) {
 }
 
 /** app/intent0/[action]/route.ts: the server half, holding the model key. */
+export const MEMORY_FILE = "intent0.memory.json";
+
+export function memoryPath(project: Project) {
+  return join(project.root, MEMORY_FILE);
+}
+
+export function writeMemory(project: Project, memory: SiteMemory) {
+  writeFileSync(memoryPath(project), `${JSON.stringify(memory)}\n`);
+}
+
+/**
+ * app/intent0/[action]/route.ts: the server half, holding the model key.
+ * An older route written by intent0 (without Site Memory) is upgraded; a hand-made one is left alone.
+ */
 export function writeRoute(project: Project): string | null {
   const ext = project.typescript ? "ts" : "js";
   const file = join(project.appDir, "intent0", "[action]", `route.${ext}`);
-  if (existsSync(file)) return null;
-  const toManifest = posix(relative(dirname(file), manifestPath(project)));
+  if (existsSync(file)) {
+    const current = readFileSync(file, "utf8");
+    if (!current.includes("Added by `intent0 init`") || current.includes(MEMORY_FILE)) return null;
+  }
+  const rel = (target: string) => {
+    const r = posix(relative(dirname(file), target));
+    return r.startsWith(".") ? r : `./${r}`;
+  };
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(
     file,
     [
       "// Added by `intent0 init`. Serves the intent bar; the model key stays on this server.",
       'import { createNextRoute } from "intent0/server";',
-      `import manifest from "${toManifest.startsWith(".") ? toManifest : `./${toManifest}`}";`,
+      `import manifest from "${rel(manifestPath(project))}";`,
+      `import memory from "${rel(memoryPath(project))}";`,
       "",
-      "export const { GET, POST } = createNextRoute(manifest);",
+      "export const { GET, POST } = createNextRoute(manifest, memory);",
       "",
     ].join("\n"),
   );

@@ -3,3 +3,6 @@ export { validatePage, type ValidationResult, type PageLimits } from "./validate
 export { startFlow, currentStep, missingNeeds, completeStep, goBack, FlowError, type FlowRun } from "./flow-runner";
 export { withFallback, type Outcome, type FallbackReason, type FallbackOptions } from "./fallback";
 export { builtinCatalog } from "./builtin-catalog";
+export { createMemoryIndex, tokenize, stem, type MemoryIndex, type SearchHit } from "./search";
+export { validateContentPage, contentCatalog, type ContentAllowed, type ContentValidation } from "./validate-content";
+export { flowTool, runFlowForAgent, searchForAgent, searchTool, type AgentTool, type AgentResult, type SiteCall } from "./agent";

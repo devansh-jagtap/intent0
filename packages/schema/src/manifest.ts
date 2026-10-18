@@ -161,7 +161,8 @@ export const Manifest = z
     revision: z.number().int().min(1),
     status: z.enum(["draft", "approved"]),
     model: ModelConfig,
-    flows: z.array(Flow).min(1),
+    // May be empty: a docs-only site uses intent0 just for information pages (Site Memory).
+    flows: z.array(Flow),
   })
   .superRefine((manifest, ctx) => {
     const seen = new Set<string>();

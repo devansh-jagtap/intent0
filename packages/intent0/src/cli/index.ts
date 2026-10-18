@@ -7,8 +7,10 @@ import { generateManifest } from "./generate";
 import { detectProject, type Project } from "./project";
 import { scanProject } from "./scan";
 import { scanAnyProject } from "./scan-generic";
+import { startMcp } from "./mcp";
 import { serve } from "./serve";
-import { MANIFEST_FILE, ensureEnvIgnored, manifestPath, patchLayout, readEnv, writeBar, writeEnv, writeManifest, writeRoute } from "./write";
+import { buildMemory, topTopics } from "./index-content";
+import { MANIFEST_FILE, MEMORY_FILE, ensureEnvIgnored, manifestPath, patchLayout, readEnv, writeBar, writeEnv, writeManifest, writeMemory, writeRoute } from "./write";
 
 const PROVIDERS: Record<string, { provider: ModelConfig["provider"]; baseUrl: string; model: string }> = {
   groq: { provider: "groq", baseUrl: "https://api.groq.com/openai/v1", model: "openai/gpt-oss-120b" },
@@ -89,65 +91,108 @@ async function init(flags: Flags) {
     log("    npm install /path/to/intent0-0.0.1.tgz\n");
   }
 
+  let keepManifest = false;
   if (existsSync(manifestPath(project)) && !flags.force) {
     const again = flags.yes ? false : await confirm(`${MANIFEST_FILE} already exists. Re-scan and replace it?`);
     if (!again) {
-      log(dim("  Keeping the existing manifest. Run with --force to replace it."));
-      return finish(project);
+      log(dim("  Keeping the existing manifest (tasks). Run with --force to replace it."));
+      keepManifest = true;
     }
   }
 
-  log(bold("\n1. Reading your code"));
-  const scan = project.mode === "next" ? scanProject(project) : scanAnyProject(project);
-  log(`  Found ${scan.routes.length} backend route(s) and ${scan.forms.length} file(s) with forms.`);
-  for (const r of scan.routes) log(dim(`    ${r.methods.join(",").padEnd(10)} ${r.path}${r.checksSession ? "  (checks session)" : ""}  ${r.file}`));
-  if (scan.routes.length === 0) {
-    throw new Error(
-      "No backend routes found. intent0 needs JSON API endpoints to call (e.g. Express app.post, Laravel Route::post, Flask @app.route, Spring @PostMapping, Next.js route.ts).",
-    );
+  if (!keepManifest) {
+    log(bold("\n1. Reading your code"));
+    const scan = project.mode === "next" ? scanProject(project) : scanAnyProject(project);
+    log(`  Found ${scan.routes.length} backend route(s) and ${scan.forms.length} file(s) with forms.`);
+    for (const r of scan.routes) log(dim(`    ${r.methods.join(",").padEnd(10)} ${r.path}${r.checksSession ? "  (checks session)" : ""}  ${r.file}`));
+
+    log(bold("\n2. Website and model"));
+    const url = await siteUrl(project, flags);
+    const choice = await chooseModel(project, flags);
+    log(dim(`  Website: ${url}`));
+    log(dim(`  Model:   ${choice.model} via ${choice.baseUrl}`));
+    const site = {
+      id: project.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/^(\d)/, "site_$1") || "website",
+      name: project.name,
+      baseUrl: url,
+    };
+    const modelConfig = { provider: choice.provider, model: choice.model };
+
+    if (scan.routes.length === 0) {
+      // Docs/content site: nothing to submit, so intent0 works as an information assistant.
+      log(dim("\n  No backend routes to call, so no tasks: intent0 will answer with information pages from your content."));
+      writeManifest(project, { schemaVersion: 1, site, revision: 1, status: "approved", model: modelConfig, flows: [] });
+    } else {
+      log(bold("\n3. Mapping your site into user tasks") + dim("  (this can take a minute)"));
+      const { manifest, dropped } = await generateManifest(
+        scan,
+        { model: openAiCompatible({ baseUrl: choice.baseUrl, apiKey: choice.key, model: choice.model }), site, modelConfig },
+        log,
+      );
+      for (const d of dropped) log(yellow(`  Dropped flow ${d}`));
+
+      log(bold(`\n4. Review: ${manifest.flows.length} task(s) found`));
+      printFlows(manifest);
+      log(dim("\n  Only approved tasks are shown to users. Disabled ones (○) stay hidden until you enable them in the manifest."));
+      const approve = flags.yes ? true : await confirm("\n  Approve these tasks now?", false);
+      manifest.status = approve ? "approved" : "draft";
+      writeManifest(project, manifest);
+      log(`  Wrote ${MANIFEST_FILE} ${approve ? green("(approved)") : yellow("(draft: nothing is shown until you run `intent0 approve`)")}`);
+    }
+
+    writeEnv(project, { LLM_BASE_URL: choice.baseUrl, LLM_MODEL: choice.model, LLM_API_KEY: choice.key });
+    if (ensureEnvIgnored(project)) log(dim("  Added .env.local to .gitignore so the key isn't committed."));
+    log(dim("  Saved model settings to .env.local"));
   }
 
-  log(bold("\n2. Website and model"));
-  const url = await siteUrl(project, flags);
-  const choice = await chooseModel(project, flags);
-  log(dim(`  Website: ${url}`));
-  log(dim(`  Model:   ${choice.model} via ${choice.baseUrl}`));
-
-  log(bold("\n3. Mapping your site into user tasks") + dim("  (this can take a minute)"));
-  const { manifest, dropped } = await generateManifest(
-    scan,
-    {
-      model: openAiCompatible({ baseUrl: choice.baseUrl, apiKey: choice.key, model: choice.model }),
-      site: {
-        id: project.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/^(\d)/, "site_$1") || "website",
-        name: project.name,
-        baseUrl: url,
-      },
-      modelConfig: { provider: choice.provider, model: choice.model },
-    },
-    log,
-  );
-  for (const d of dropped) log(yellow(`  Dropped flow ${d}`));
-  if (manifest.flows.length === 0) throw new Error("The model found no user tasks it could map safely.");
-
-  log(bold(`\n4. Review: ${manifest.flows.length} task(s) found`));
-  printFlows(manifest);
-  log(dim("\n  Only approved tasks are shown to users. Disabled ones (○) stay hidden until you enable them in the manifest."));
-  const approve = flags.yes ? true : await confirm("\n  Approve these tasks now?", false);
-  manifest.status = approve ? "approved" : "draft";
-  writeManifest(project, manifest);
-  log(`  Wrote ${MANIFEST_FILE} ${approve ? green("(approved)") : yellow("(draft: nothing is shown until you run `intent0 approve`)")}`);
-
-  writeEnv(project, { LLM_BASE_URL: choice.baseUrl, LLM_MODEL: choice.model, LLM_API_KEY: choice.key });
-  if (ensureEnvIgnored(project)) log(dim("  Added .env.local to .gitignore so the key isn't committed."));
-  log(dim("  Saved model settings to .env.local"));
-
+  await indexContent(project, flags, true);
   finish(project);
+}
+
+function siteFromManifest(project: Project): string | undefined {
+  try {
+    return new URL(JSON.parse(readFileSync(manifestPath(project), "utf8")).site.baseUrl).origin;
+  } catch {
+    return undefined;
+  }
+}
+
+async function reachable(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(4_000) });
+    return res.ok || res.status < 500;
+  } catch {
+    return false;
+  }
+}
+
+/** Builds Site Memory (intent0.memory.json) from the site's docs files and its live pages. */
+async function indexContent(project: Project, flags: Flags, fromInit: boolean) {
+  log(bold(`\n${fromInit ? "5" : "1"}. Site Memory: reading your content`) + dim("  (docs, guides, pages; no model needed)"));
+  // Most sites keep their content in pages (or a CMS/database behind them), not in Markdown files,
+  // so the running site is read too whenever it's reachable.
+  let crawl = typeof flags.crawl === "string" ? flags.crawl : undefined;
+  if (!crawl && !flags["no-crawl"]) {
+    const site = siteFromManifest(project);
+    if (site && (await reachable(site))) crawl = site;
+    else if (site) {
+      log(yellow(`  Your site isn't running at ${site}, so only files in the repo can be read.`));
+      const answer = flags.yes ? "" : await ask("  Start it (e.g. npm run dev) and press Enter to read its pages, or type 'skip'", "");
+      if (answer.toLowerCase() !== "skip" && (await reachable(answer.startsWith("http") ? answer : site))) crawl = answer.startsWith("http") ? answer : site;
+      else log(dim(`  Later, with the site running: npx intent0 index`));
+    }
+  }
+  const memory = await buildMemory({ root: project.root, crawl, maxPages: Number(flags["max-pages"] ?? 150), log });
+  writeMemory(project, memory);
+  const codeBlocks = memory.sections.reduce((n, s) => n + s.code.length, 0);
+  log(`  Wrote ${MEMORY_FILE}: ${memory.pages.length} page(s), ${memory.sections.length} section(s), ${codeBlocks} code block(s), ${memory.links.length} link(s)`);
+  if (memory.sections.length) log(dim(`  Main topics: ${topTopics(memory).join(", ")}`));
+  else log(dim("  No content found. Run `npx intent0 index --crawl http://localhost:3000` while your site is running to read its pages."));
 }
 
 function finish(project: Project) {
   if (project.mode === "script") {
-    log(bold("\n5. Add the intent bar to your website"));
+    log(bold("\n6. Add the intent bar to your website"));
     log("  a) Start the intent0 server in this folder (keep it running next to your website):");
     log(`       npx intent0 serve`);
     if (!project.hasIntent0Dependency) log(dim("       (intent0 isn't installed here, so run it from the package file: npx --package=<path to intent0-0.0.1.tgz> intent0 serve)"));
@@ -157,7 +202,7 @@ function finish(project: Project) {
     return;
   }
 
-  log(bold("\n5. Adding the intent bar"));
+  log(bold("\n6. Adding the intent bar"));
   const route = writeRoute(project);
   log(route ? `  Created ${route}` : dim("  Server route already exists; left as is."));
   const bar = writeBar(project);
@@ -208,15 +253,32 @@ function help() {
                     --provider groq|nvidia|ollama|openai|custom   --model <id>   --base-url <url>
                     --site-url <url>   --yes (approve without asking)   --force (replace manifest)
                     --script (use the script tag even on a Next.js project)
+  intent0 index     (Re)build Site Memory (intent0.memory.json) from your docs files and running site
+                    --crawl <url> (site address, default: the manifest's)   --no-crawl   --max-pages <n>
   intent0 approve   Validate ${MANIFEST_FILE} after you edit it and mark it approved
   intent0 serve     Run the intent0 server for script-tag websites (default port ${SERVE_PORT})
                     --port <n>   --origin <url,url>  (extra website addresses allowed to use it)
+  intent0 mcp       Serve this site's public tasks + search to AI agents (Claude Desktop, Cursor…) over MCP
+                    --site <url>  (where the website runs; default: the manifest's site URL)   --dir <project folder>
 
   The model key is read from INTENT0_API_KEY or asked for, and saved only to .env.local.`);
 }
 
 const { command, flags } = parseArgs(process.argv.slice(2));
-const commands: Record<string, () => unknown> = { init: () => init(flags), approve, serve: () => startServer(flags), help };
+const commands: Record<string, () => unknown> = {
+  init: () => init(flags),
+  index: () => indexContent(detectProject(process.cwd(), { script: Boolean(flags.script) }), flags, false),
+  approve,
+  serve: () => startServer(flags),
+  mcp: () => {
+    // Agent apps (e.g. Claude Desktop) don't start servers in your project folder, so it can be given.
+    const root = typeof flags.dir === "string" ? flags.dir : process.cwd();
+    const manifestFile = join(root, MANIFEST_FILE);
+    if (!existsSync(manifestFile)) throw new Error(`No ${MANIFEST_FILE} here. Run \`intent0 init\` first.`);
+    startMcp({ manifestFile, memoryFile: join(root, MEMORY_FILE), site: typeof flags.site === "string" ? flags.site : undefined, version: "0.0.1" });
+  },
+  help,
+};
 
 Promise.resolve()
   .then(() => (commands[command] ?? help)())

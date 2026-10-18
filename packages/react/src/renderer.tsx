@@ -1,41 +1,47 @@
-import type { Field, PageNode, PageSpec, Step } from "@intent0/schema";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import type { ContentPage, Field, PageNode, PageSpec, Step } from "@intent0/schema";
 import type { ResolvedKit } from "./kit";
 
-interface RenderContext {
+// ---------------------------------------------------------------- forms
+
+interface FormContext {
   step: Step;
   values: Record<string, unknown>;
   fieldErrors: Record<string, string[] | undefined>;
   kit: ResolvedKit;
   busy: boolean;
-  /** The real current step. The Stepper always shows this, not whatever the model wrote. */
-  stepIndex: number;
-  /** All step titles of the flow, from the manifest. */
-  stepTitles: string[];
+  /** Long forms are shown in parts; only fields of the current part are visible. */
+  part: number;
+  partOf: (field: string) => number;
 }
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() !== "" ? v : undefined);
 const num = (v: unknown) => (typeof v === "number" ? v : undefined);
+const INPUT_TYPE: Partial<Record<Field["type"], string>> = { email: "email", phone: "tel", number: "number" };
 
-function FieldShell({
-  field,
-  label,
-  help,
-  errors,
-  children,
-}: {
-  field: Field;
-  label?: string;
-  help?: string;
-  errors?: string[];
-  children: ReactNode;
-}) {
+/** Fields per part when a step has many of them (e.g. a 16-field passport form becomes 3 parts). */
+export const FIELDS_PER_PART = 6;
+
+/** Field names in the order the page shows them. */
+export function boundFields(blocks: PageNode[]): string[] {
+  const out: string[] = [];
+  const walk = (nodes: PageNode[]) => {
+    for (const n of nodes) {
+      if (n.bind) out.push(n.bind);
+      if (n.children) walk(n.children);
+    }
+  };
+  walk(blocks);
+  return out;
+}
+
+function FieldShell({ field, label, help, errors, hidden, children }: { field: Field; label?: string; help?: string; errors?: string[]; hidden: boolean; children: ReactNode }) {
   const hint = help ?? field.help;
   return (
-    <div className="i0-field">
+    <div className="i0-field" hidden={hidden} data-part-field={field.name}>
       <label htmlFor={`i0-${field.name}`} className="i0-label">
         {label ?? field.label}
-        {field.required && <span className="i0-req"> *</span>}
+        {field.required && <span className="i0-req" aria-hidden> *</span>}
       </label>
       {children}
       {hint && <p className="i0-help">{hint}</p>}
@@ -48,9 +54,7 @@ function FieldShell({
   );
 }
 
-const INPUT_TYPE: Partial<Record<Field["type"], string>> = { email: "email", phone: "tel", number: "number" };
-
-function renderField(node: PageNode, field: Field, ctx: RenderContext): ReactNode {
+function renderField(node: PageNode, field: Field, ctx: FormContext): ReactNode {
   const { Input, Textarea } = ctx.kit;
   const id = `i0-${field.name}`;
   const initial = str(ctx.values[field.name]);
@@ -58,6 +62,7 @@ function renderField(node: PageNode, field: Field, ctx: RenderContext): ReactNod
   const common = { id, name: field.name, required: field.required, defaultValue: initial, "aria-invalid": invalid };
   const label = str(node.props.label);
   const help = str(node.props.help);
+  const hidden = ctx.partOf(field.name) !== ctx.part;
 
   let control: ReactNode;
   switch (node.component) {
@@ -71,7 +76,7 @@ function renderField(node: PageNode, field: Field, ctx: RenderContext): ReactNod
       control = (
         <select {...common} defaultValue={initial ?? ""} className="i0-select">
           <option value="" disabled>
-            Select…
+            Choose…
           </option>
           {field.options?.map((o) => (
             <option key={o.value} value={o.value}>
@@ -92,7 +97,7 @@ function renderField(node: PageNode, field: Field, ctx: RenderContext): ReactNod
       break;
     case "Checkbox":
       return (
-        <label className="i0-check">
+        <label className="i0-check" hidden={hidden} data-part-field={field.name}>
           <input type="checkbox" name={field.name} value="true" required={field.required} /> {label ?? field.label}
         </label>
       );
@@ -100,54 +105,189 @@ function renderField(node: PageNode, field: Field, ctx: RenderContext): ReactNod
       return null;
   }
   return (
-    <FieldShell field={field} label={label} help={help} errors={ctx.fieldErrors[field.name]}>
+    <FieldShell field={field} label={label} help={help} errors={ctx.fieldErrors[field.name]} hidden={hidden}>
       {control}
     </FieldShell>
   );
 }
 
-function renderNode(node: PageNode, ctx: RenderContext, key: string): ReactNode {
+function renderFormNode(node: PageNode, ctx: FormContext, key: string): ReactNode {
   if (node.bind) {
     const field = ctx.step.fields.find((f) => f.name === node.bind);
     return field ? <div key={key}>{renderField(node, field, ctx)}</div> : null;
   }
   const p = node.props;
+  // Explanatory text belongs with the first part of a long form.
+  const intro = ctx.part === 0;
   switch (node.component) {
     case "Heading":
-      return (num(p.level) ?? 2) <= 2 ? (
-        <h2 key={key} className="i0-h2">{str(p.text)}</h2>
-      ) : (
-        <h3 key={key} className="i0-h3">{str(p.text)}</h3>
-      );
+      return intro ? <h2 key={key} className="i0-title">{str(p.text)}</h2> : null;
     case "Text":
-      return <p key={key} className="i0-text">{str(p.text)}</p>;
+      return intro ? <p key={key} className="i0-text">{str(p.text)}</p> : null;
     case "Notice":
-      return <p key={key} className="i0-notice">{str(p.text)}</p>;
-    case "Group":
+      return <p key={key} className="i0-callout">{str(p.text)}</p>;
+    case "Group": {
+      const children = node.children?.map((c, i) => renderFormNode(c, ctx, `${key}.${i}`));
+      const anyVisible = node.children?.some((c) => !c.bind || ctx.partOf(c.bind) === ctx.part) ?? true;
       return (
-        <fieldset key={key} className="i0-group">
+        <fieldset key={key} className="i0-group" hidden={!anyVisible}>
           {str(p.label) && <legend className="i0-legend">{str(p.label)}</legend>}
-          {node.children?.map((c, i) => renderNode(c, ctx, `${key}.${i}`))}
+          {children}
         </fieldset>
       );
+    }
+    // The step trail lives in the sheet's rail; submit buttons are drawn by the form footer.
     case "Stepper":
-      // Titles and position come from the manifest and the flow runner, not the model.
+    case "SubmitButton":
+      return null;
+    default:
+      return null;
+  }
+}
+
+export function submitLabel(page: PageSpec): string {
+  const find = (nodes: PageNode[]): string | undefined => {
+    for (const n of nodes) {
+      if (n.component === "SubmitButton") return str(n.props.label);
+      const inner = n.children && find(n.children);
+      if (inner) return inner;
+    }
+  };
+  return find(page.blocks) ?? "Continue";
+}
+
+/** Draws a validated form page. Only catalog components exist here; unknown ones render nothing. */
+export function FormView({ page, ...ctx }: { page: PageSpec } & FormContext) {
+  return <div className="i0-page">{page.blocks.map((b, i) => renderFormNode(b, ctx, String(i)))}</div>;
+}
+
+// ---------------------------------------------------------------- information pages
+
+export interface Sources {
+  sections: Record<string, { url: string; page: string; heading: string; anchor?: string }>;
+  code: Record<string, { lang: string; code: string }>;
+}
+
+/** Citation numbers in the order sections are first cited. */
+export function citationOrder(page: ContentPage): string[] {
+  const order: string[] = [];
+  const walk = (nodes: PageNode[]) => {
+    for (const n of nodes) {
+      const cites = (n.props as { cites?: unknown }).cites;
+      if (Array.isArray(cites)) for (const c of cites) if (typeof c === "string" && !order.includes(c)) order.push(c);
+      if (n.children) walk(n.children);
+    }
+  };
+  walk(page.blocks);
+  return order;
+}
+
+export const sourceHref = (s: { url: string; anchor?: string }) => `${s.url}${s.anchor ? `#${s.anchor}` : ""}`;
+
+function Cites({ ids, order, sources }: { ids: unknown; order: string[]; sources: Sources }) {
+  if (!Array.isArray(ids)) return null;
+  return (
+    <>
+      {ids.map((id: string) => {
+        const s = sources.sections[id];
+        const n = order.indexOf(id) + 1;
+        return s && n > 0 ? (
+          <a key={id} className="i0-cite" href={sourceHref(s)} title={`${s.page}: ${s.heading}`}>
+            [{n}]
+          </a>
+        ) : null;
+      })}
+    </>
+  );
+}
+
+function CodeView({ code, caption }: { code: { lang: string; code: string }; caption?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <figure className="i0-code" style={{ margin: 0 }}>
+      <div className="i0-code-head">
+        <span>{caption ?? code.lang}</span>
+        <button
+          type="button"
+          className="i0-link"
+          onClick={() => {
+            void navigator.clipboard?.writeText(code.code).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            });
+          }}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre>
+        <code>{code.code}</code>
+      </pre>
+    </figure>
+  );
+}
+
+interface ContentContext {
+  sources: Sources;
+  order: string[];
+  kit: ResolvedKit;
+  taskTitle: (flowId: string) => string | undefined;
+  onStartTask: (flowId: string) => void;
+}
+
+function renderContentNode(node: PageNode, ctx: ContentContext, key: string): ReactNode {
+  const p = node.props;
+  switch (node.component) {
+    case "Section":
       return (
-        <ol key={key} className="i0-steps">
-          {ctx.stepTitles.map((s, i) => (
-            <li key={s} className="i0-step" data-state={i === ctx.stepIndex ? "current" : i < ctx.stepIndex ? "done" : "todo"}>
-              {i < ctx.stepIndex ? "✓ " : ""}
-              {s}
-            </li>
-          ))}
-        </ol>
+        <section key={key} className="i0-section">
+          {str(p.heading) && <h3 className="i0-h3">{str(p.heading)}</h3>}
+          {node.children?.map((c, i) => renderContentNode(c, ctx, `${key}.${i}`))}
+        </section>
       );
-    case "SubmitButton": {
-      const { Button } = ctx.kit;
+    case "Heading":
+      return <h3 key={key} className="i0-h3">{str(p.text)}</h3>;
+    case "Paragraph":
+      return (
+        <p key={key} className="i0-text">
+          {str(p.text)}
+          <Cites ids={p.cites} order={ctx.order} sources={ctx.sources} />
+        </p>
+      );
+    case "List":
       return (
         <div key={key}>
-          <Button type="submit" disabled={ctx.busy}>
-            {ctx.busy ? "Please wait…" : (str(p.label) ?? "Continue")}
+          <ul className="i0-list">
+            {(Array.isArray(p.items) ? (p.items as string[]) : []).map((item, i) => (
+              <li key={i} className="i0-text">
+                {item}
+              </li>
+            ))}
+          </ul>
+          <Cites ids={p.cites} order={ctx.order} sources={ctx.sources} />
+        </div>
+      );
+    case "Callout":
+      return (
+        <p key={key} className="i0-callout i0-text" data-tone={str(p.tone) ?? "info"}>
+          {str(p.text)}
+          <Cites ids={p.cites} order={ctx.order} sources={ctx.sources} />
+        </p>
+      );
+    case "CodeBlock": {
+      const code = ctx.sources.code[String(p.ref)];
+      return code ? <CodeView key={key} code={code} caption={str(p.caption)} /> : null;
+    }
+    case "TaskCard": {
+      const flowId = String(p.flowId);
+      const title = ctx.taskTitle(flowId);
+      if (!title) return null;
+      const { Button } = ctx.kit;
+      return (
+        <div key={key} className="i0-task">
+          <strong>{str(p.label) ?? title}</strong>
+          <Button type="button" onClick={() => ctx.onStartTask(flowId)}>
+            Start
           </Button>
         </div>
       );
@@ -157,7 +297,12 @@ function renderNode(node: PageNode, ctx: RenderContext, key: string): ReactNode 
   }
 }
 
-/** Draws a validated page spec. Only catalog components exist here; unknown ones render nothing. */
-export function PageView({ page, ...ctx }: { page: PageSpec } & RenderContext) {
-  return <div className="i0-page">{page.blocks.map((b, i) => renderNode(b, ctx, String(i)))}</div>;
+/** Draws a validated information page. Code comes from the site's docs (sources), never from the model. */
+export function ContentView({ page, ...ctx }: { page: ContentPage } & ContentContext) {
+  return (
+    <div className="i0-page">
+      <h2 className="i0-title">{page.title}</h2>
+      {page.blocks.map((b, i) => renderContentNode(b, ctx, String(i)))}
+    </div>
+  );
 }

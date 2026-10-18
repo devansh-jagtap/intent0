@@ -27,6 +27,18 @@
 - Name: Learner tests CLI (Next.js and/or script tag) on own website; next candidates: dashboard, agent tools, voice/languages, codegen adapters per language
 - Stage: script tag implemented 2026-10-18; awaiting learner feedback. Learner said "I will test it, you go forward".
 
+## Site Memory + content pages + agents + redesign — IMPLEMENTED 2026-10-18 (uncommitted)
+- Schema: SiteMemory (pages, sections w/ path/anchor/topics, verbatim code blocks, links), ContentPage; manifest flows may be empty (docs-only sites).
+- Core: BM25 search with topic focus/exclusion (createMemoryIndex), validateContentPage (cite-required text, code by ref, approved TaskCards), agent tools (flowTool, runFlowForAgent with needs_input/needs_confirmation/resume token, searchTool, searchForAgent).
+- Adapter: resolve returns kind task|content|none; /answer (grounded content page, model or template), /search.
+- CLI: `intent0 index` (md/mdx by heading, --crawl via node-html-parser, root README skipped), init builds memory + handles content-only sites, route upgraded to load memory, serve loads memory, `intent0 mcp` (stdio JSON-RPC: initialize/tools/list/tools/call; public flows only; --dir/--site).
+- React: redesigned bar + unfolding sheet ("You asked"), steps/sources rail, dark-host detection, Ctrl/⌘K + Esc, long forms in parts of 6, ContentView (citations, CodeView with copy, TaskCard), browser-only remembered details (sessionStorage, "Forget my details"), WebMCP registration.
+- Verified (replica outside repo, live model): "how do I set up quark orm in my vue app" → Vue-only cited page with exact code; "documents/cost for passport" → cited help + Start passport task → form; MCP driver: tools/list, search_site, needs_input, needs_confirmation, confirmed submit DLA-2026-61311O, track → pending; crawl indexing. 74 tests pass. WebMCP not testable without a supporting browser (no-op otherwise).
+
+## Site Memory — CONFIRMED 2026-10-18 ("build this correctly without forgetting the purpose: commands that make a website intent-driven")
+- Learner studied Mimick-Me (knowledge sources → 650-word chunks w/o metadata → Qwen3 embeddings → 0.7 semantic + 0.3 recency, 3,200-token context; portfolio = LLM-filled section registry; no graph). Asked for content memory + knowledge graph the LLM uses to generate the site, content pages (e.g. Vue-only docs), agent access, nicer bar.
+- Confirmed design (Claude's proposals accepted): intent0.memory.json built by `intent0 index` (md/mdx + crawl), heading-based chunks with page/heading provenance and whole code blocks, topics, graph links (page↔section↔topic, task→endpoint/fields/page, topic↔task, field sameAs); BM25 + graph expansion; content pages with cite-required paragraphs and code by reference only; TaskCard to start tasks; browser-only user memory; then agents (MCP + WebMCP), then design refresh.
+
 ## Real-world milestone — 2026-10-18
 - Learner confirmed on their own Next.js portal: the intent bar generated the form and the submission was recorded in their database. First end-to-end success on a real project.
 - Next decision (learner's): dashboard / agent tools / voice + Hindi / publish to npm / per-language adapters. Lots of work uncommitted — offered to commit.
@@ -173,3 +185,13 @@
 
 ## Architecture
 - Claude wrote a full proposed architecture before learning mode was activated. It is a proposal only; no design decisions have been confirmed by the learner. No code exists.
+
+## Real-site fix: "notice on 6 October 2026" (2026-10-18)
+- Learner reported: on their own portal the bar couldn't answer "tell me about the notice on the 6 October 2026".
+- Cause (Claude diagnosed): the site's intent0.memory.json was empty (no Markdown docs, crawl never ran), and the HTML reader would have merged neighbouring notice cards, mixing up dates.
+- Built (Claude): `index`/`init` now crawl the running site automatically (address from the manifest; `--no-crawl` to skip); each card (li/article with one heading) becomes its own cited section with its id as anchor; links read before nav/header/footer are dropped; admin/account/login/officer areas never crawled; page titles drop the site-name suffix.
+- Verified on the learner's site: answer "Notice dated 6 October 2026 (N-2026-037)" cited to /notices#N-2026-037. All 75 tests pass.
+
+## Layer placement (learner's design, 2026-10-18)
+- Learner decided: no bar across the top of the site; a button on the left side of the screen opens the intent bar, and the generated answer appears as an overlay on top of the actual website.
+- Built (Claude): left-edge "Ask" tab (also Ctrl/⌘K); panel slides in from the left over a dimmed site (440px idle, 760px with an answer, full width on phones); Esc/scrim/× hide it and keep the answer; clicking a cited source closes the panel and shows that spot on the real page. Verified on the learner's portal.

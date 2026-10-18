@@ -3,7 +3,7 @@ import { createServer, type IncomingMessage } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createIntent0Handler, modelFromEnv } from "@intent0/adapter";
-import { Manifest } from "@intent0/schema";
+import { Manifest, SiteMemory } from "@intent0/schema";
 
 function envFile(path: string): Record<string, string> {
   if (!existsSync(path)) return {};
@@ -39,18 +39,26 @@ export function serve({ root, manifestFile, port, origins, log }: ServeOptions) 
   const model = modelFromEnv(env);
   const scriptFile = join(dirname(fileURLToPath(import.meta.url)), "intent0.js");
 
-  // Reload the manifest whenever the file changes (e.g. after `intent0 approve`).
-  let loaded = { mtime: 0, handle: null as ReturnType<typeof createIntent0Handler> | null, allowed: new Set<string>() };
+  // Reload the manifest and Site Memory whenever either file changes (e.g. after `intent0 approve` / `intent0 index`).
+  const memoryFile = join(dirname(manifestFile), "intent0.memory.json");
+  const mtimeOf = (f: string) => (existsSync(f) ? statSync(f).mtimeMs : 0);
+  let loaded = { mtime: "", handle: null as ReturnType<typeof createIntent0Handler> | null, allowed: new Set<string>() };
   function current() {
-    const mtime = statSync(manifestFile).mtimeMs;
+    const mtime = `${mtimeOf(manifestFile)}:${mtimeOf(memoryFile)}`;
     if (mtime !== loaded.mtime) {
       const manifest = Manifest.parse(JSON.parse(readFileSync(manifestFile, "utf8")));
+      const memoryParse = existsSync(memoryFile) ? SiteMemory.safeParse(JSON.parse(readFileSync(memoryFile, "utf8"))) : null;
+      if (memoryParse && !memoryParse.success) log("  intent0.memory.json is invalid; information pages are off until you run `intent0 index` again.");
+      const memory = memoryParse?.success ? memoryParse.data : null;
       loaded = {
         mtime,
-        handle: createIntent0Handler({ manifest, model }),
+        handle: createIntent0Handler({ manifest, memory, model }),
         allowed: new Set([new URL(manifest.site.baseUrl).origin, ...origins]),
       };
-      log(`  Loaded ${manifest.flows.filter((f) => f.enabled).length} task(s), status: ${manifest.status}`);
+      log(
+        `  Loaded ${manifest.flows.filter((f) => f.enabled).length} task(s), status: ${manifest.status}` +
+          (memory ? `; Site Memory: ${memory.pages.length} page(s), ${memory.sections.length} section(s)` : ""),
+      );
     }
     return loaded;
   }
