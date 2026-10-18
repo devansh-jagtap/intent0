@@ -27,6 +27,10 @@
 - Name: Learner tests CLI (Next.js and/or script tag) on own website; next candidates: dashboard, agent tools, voice/languages, codegen adapters per language
 - Stage: script tag implemented 2026-10-18; awaiting learner feedback. Learner said "I will test it, you go forward".
 
+## Real-world milestone — 2026-10-18
+- Learner confirmed on their own Next.js portal: the intent bar generated the form and the submission was recorded in their database. First end-to-end success on a real project.
+- Next decision (learner's): dashboard / agent tools / voice + Hindi / publish to npm / per-language adapters. Lots of work uncommitted — offered to commit.
+
 ## Manifest generator v2 — 2026-10-18 (after learner hit Groq 429 with qwen, OTPM limit 1000)
 - Learner hand-wrote a manifest; v1 had invalid auth "admin", 15 select/radio fields without options, status draft. v2 (their fix) is valid.
 - Generator rewritten: A) plan call (tasks + routes, no fields); coverage check (concrete dynamic-route literals in code + unused static write routes) → follow-up call → deterministic outline from route/page names if still missing; B) one detail call per task with only relevant code slice, compact field format expanded by intent0; grounding: option values corrected from code (label→value map, case), returns limited to keys the code's json replies contain (+ referenceId/status-like keys). Model errors carry retryAfter/outputLimit/inputTooLarge → auto wait / max_tokens / smaller context.
