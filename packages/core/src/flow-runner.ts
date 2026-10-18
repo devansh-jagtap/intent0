@@ -69,8 +69,13 @@ export function completeStep(
     }
   }
 
+  // Only values a later step depends on are required (e.g. an OTP request id). The rest
+  // (reference numbers, status text) are kept when present: the backend already accepted
+  // the step, so a missing extra key must not turn a success into an error.
   const expected = step.action?.returns ?? [];
-  const absent = expected.filter((name) => isEmpty(result.outputs[name]));
+  const later = flow.steps.slice(run.stepIndex + 1);
+  const required = new Set(later.flatMap((s) => [...s.needs, ...(s.action?.sends ?? [])]));
+  const absent = expected.filter((name) => required.has(name) && isEmpty(result.outputs[name]));
   if (absent.length > 0) {
     throw new FlowError(`step "${step.id}": backend did not return ${absent.join(", ")}`);
   }
@@ -78,6 +83,7 @@ export function completeStep(
   const outputs = { ...run.outputs };
   const producedBy = { ...run.producedBy };
   for (const name of expected) {
+    if (result.outputs[name] === undefined) continue;
     outputs[name] = result.outputs[name];
     producedBy[name] = run.stepIndex;
   }

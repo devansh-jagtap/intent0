@@ -39,6 +39,41 @@ describe("manifest rules", () => {
   });
 });
 
+describe("real API key names and path values", () => {
+  const flow = (path: string, sends: string[]) => ({
+    ...clone(example),
+    flows: [
+      {
+        id: "track_status",
+        title: "Track",
+        description: "Track an application",
+        auth: "public",
+        fallbackPath: "/track",
+        steps: [
+          {
+            id: "lookup",
+            title: "Find it",
+            kind: "form",
+            fields: [{ name: "referenceId", label: "Reference", type: "text" }],
+            action: { method: "GET", path, sends, returns: ["status", "referenceId"] },
+          },
+        ],
+      },
+    ],
+  });
+
+  it("keeps camelCase keys exactly as the API uses them", () => {
+    const r = Manifest.safeParse(flow("/api/status/{referenceId}", ["referenceId"]));
+    expect(r.success ? [] : formatIssues(r.error)).toEqual([]);
+  });
+
+  it("requires every {placeholder} in a path to be in sends", () => {
+    const r = Manifest.safeParse(flow("/api/status/{referenceId}", []));
+    expect(r.success).toBe(false);
+    if (!r.success) expect(formatIssues(r.error).join("\n")).toMatch(/must also be listed in sends/);
+  });
+});
+
 describe("model config", () => {
   it("has no place for an API key", () => {
     const result = ModelConfig.safeParse({ provider: "groq", model: "some-model", apiKey: "sk-123" });

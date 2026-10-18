@@ -1,4 +1,4 @@
-export { findFlow, findStep, resolveAction, fallbackUrl } from "./lookup";
+export { findFlow, findStep, resolveAction, buildRequest, fallbackUrl } from "./lookup";
 export { validatePage, type ValidationResult, type PageLimits } from "./validate-page";
 export { startFlow, currentStep, missingNeeds, completeStep, goBack, FlowError, type FlowRun } from "./flow-runner";
 export { withFallback, type Outcome, type FallbackReason, type FallbackOptions } from "./fallback";

@@ -1,4 +1,4 @@
-import type { Flow, Manifest, Step } from "@intent0/schema";
+import { pathParams, type Flow, type Manifest, type Step } from "@intent0/schema";
 
 export function findFlow(manifest: Manifest, flowId: string): Flow | undefined {
   return manifest.flows.find((f) => f.id === flowId);
@@ -28,6 +28,34 @@ export function resolveAction(
   if (url.origin !== base.origin) return null;
 
   return { method: step.action.method, url: url.toString(), sends: step.action.sends };
+}
+
+/**
+ * Builds the actual request for a step from what the user entered and earlier outputs:
+ * {key} placeholders in the path are filled (URL-encoded) and left out of the body;
+ * everything else in `sends` becomes the body (or query string for GET).
+ * Returns null if the step isn't approved, or an error if a path value is missing.
+ */
+export function buildRequest(
+  manifest: Manifest,
+  flowId: string,
+  stepId: string,
+  available: Record<string, unknown>,
+): { method: string; path: string; body: Record<string, unknown> } | { error: string } | null {
+  const action = resolveAction(manifest, flowId, stepId);
+  const step = action ? findStep(findFlow(manifest, flowId)!, stepId) : undefined;
+  if (!action || !step?.action) return null;
+
+  const params = pathParams(step.action.path);
+  for (const p of params) {
+    const v = available[p];
+    if (v === undefined || v === null || String(v).trim() === "") return { error: `missing value for ${p}` };
+  }
+  const path = step.action.path.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_, k: string) => encodeURIComponent(String(available[k]).trim()));
+  const body = Object.fromEntries(
+    action.sends.filter((k) => !params.includes(k) && available[k] !== undefined).map((k) => [k, available[k]]),
+  );
+  return { method: action.method, path, body };
 }
 
 /** The original page for a flow, used whenever the generated experience can't be shown. */

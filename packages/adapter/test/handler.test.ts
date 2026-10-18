@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Manifest } from "@intent0/schema";
 import example from "../../../examples/enterprise-portal.manifest.json";
-import { createIntent0Handler, parseJsonReply, type JsonModel } from "../src/index";
+import { ModelError, createIntent0Handler, openAiCompatible, parseJsonReply, type JsonModel } from "../src/index";
 
 const manifest = Manifest.parse(example);
 const post = (body: unknown) => new Request("http://x/intent0", { method: "POST", body: JSON.stringify(body) });
@@ -97,8 +97,33 @@ describe("adapter with a model", () => {
   });
 });
 
+describe("model errors carry provider limits", () => {
+  const replyWith = (status: number, body: string, headers: Record<string, string> = {}) =>
+    vi.stubGlobal("fetch", async () => new Response(body, { status, headers }));
+  const model = openAiCompatible({ baseUrl: "https://example.test/v1", apiKey: "k", model: "m" });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads the output-token cap from a 'request too large' reply", async () => {
+    replyWith(429, '{"error":{"message":"Request too large for model on output tokens per minute (OTPM): Limit 1000, Requested 2048."}}');
+    const err = (await model.complete("s", "u").catch((e: unknown) => e)) as ModelError;
+    expect(err).toBeInstanceOf(ModelError);
+    expect(err.outputLimit).toBe(1000);
+  });
+
+  it("reads how long to wait from a rate-limit reply", async () => {
+    replyWith(429, '{"error":{"message":"Rate limit reached ... Please try again in 7.5s."}}');
+    const err = (await model.complete("s", "u").catch((e: unknown) => e)) as ModelError;
+    expect(err.retryAfterMs).toBe(7500);
+  });
+});
+
 describe("parseJsonReply", () => {
   it("reads JSON wrapped in a code fence", () => {
     expect(parseJsonReply('```json\n{"a":1}\n```')).toEqual({ a: 1 });
+  });
+
+  it("ignores a reasoning model's <think> block, even with braces in it", () => {
+    expect(parseJsonReply('<think>maybe {x} or {y}?</think>\n{"a":2}')).toEqual({ a: 2 });
   });
 });

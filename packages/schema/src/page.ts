@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { Id } from "./common";
+import { Id, Key } from "./common";
 
 /**
  * One node of a generated page: which catalog component to show, its props,
@@ -9,7 +9,7 @@ import { Id } from "./common";
 export const PageNode = z.strictObject({
   component: z.string().min(1),
   props: z.record(z.string(), z.unknown()).default({}),
-  bind: Id.optional(),
+  bind: Key.optional(),
   get children(): z.ZodOptional<z.ZodArray<typeof PageNode>> {
     return z.array(PageNode).optional();
   },

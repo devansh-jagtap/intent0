@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative, sep } from "node:path";
+import { objectKeys } from "./keys";
 import type { Project } from "./project";
 import type { FormInfo, RouteInfo, ScanResult } from "./scan";
 
@@ -37,9 +38,15 @@ function walk(dir: string, out: string[] = []): string[] {
 
 const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))];
 const all = (re: RegExp, text: string, g = 1) => [...text.matchAll(re)].map((m) => m[g] ?? "");
-/** Paths with parameters (:id, {id}, <id>, [id]) can't be called from a fixed manifest path yet. */
-const hasParams = (p: string) => /[:{}<>[\]*]/.test(p);
-const normPath = (p: string) => `/${p.replace(/^\/+/, "")}`.replace(/\/+$/, "") || "/";
+/**
+ * Normalises a route path and writes every framework's parameter style (:id, {id}, <int:id>)
+ * as [id], the same as Next.js, so all scanners and the matcher use one format.
+ */
+const normPath = (p: string) =>
+  (`/${p.replace(/^\/+/, "")}`.replace(/\/+$/, "") || "/")
+    .replace(/:(\w+)\??/g, "[$1]")
+    .replace(/\{(\w+)(?::[^}]*)?\}/g, "[$1]")
+    .replace(/<(?:\w+:)?(\w+)>/g, "[$1]");
 
 interface Decl {
   method: string;
@@ -71,7 +78,8 @@ function declarations(code: string, file: string, root: string): Decl[] {
     const method = /\$_POST|php:\/\/input/.test(code) ? "POST" : "GET";
     push(method, posixRel(root, file), 0);
   }
-  return out.filter((d) => !hasParams(d.path));
+  // Wildcards (*) can't be mapped to a fixed task; everything else is kept.
+  return out.filter((d) => !d.path.includes("*"));
 }
 
 const posixRel = (root: string, file: string) => relative(root, file).split(sep).join("/");
@@ -92,7 +100,7 @@ function ioNear(code: string, at: number) {
     ...all(/body\.(\w+)/g, chunk),
   ]).filter((x) => /^\w+$/.test(x));
   const outputs = uniq([
-    ...all(/\.json\(\s*\{([^}]*)\}/g, chunk).flatMap((b) => all(/(\w+)\s*(?::|,|$)/g, b)),
+    ...all(/\.json\(\s*\{([^}]*)\}/g, chunk).flatMap(objectKeys),
     ...all(/json_encode\(\s*\[([^\]]*)\]/g, chunk).flatMap((b) => all(/['"](\w+)['"]\s*=>/g, b)),
     ...all(/jsonify\(([^)]*)\)/g, chunk).flatMap((b) => [...all(/(\w+)\s*=/g, b), ...all(/["'](\w+)["']\s*:/g, b)]),
     ...all(/return\s*\{([^}]*)\}/g, chunk).flatMap((b) => all(/["'](\w+)["']\s*:/g, b)),

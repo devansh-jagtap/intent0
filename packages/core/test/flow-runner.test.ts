@@ -61,6 +61,12 @@ describe("flow runner", () => {
     expect(run.values.otp).toBe("123456");
   });
 
+  it("finishes even if the last step's reply lacks an optional extra key", () => {
+    const run = startFlow(manifest, "print_certificate", { certificate_reference: "DEMO-1" });
+    const done = completeStep(manifest, run, { values: {}, outputs: {} });
+    expect(done.done).toBe(true);
+  });
+
   it("uses prefill from the intent as starting values", () => {
     const run = startFlow(manifest, "new_registration", { activity_description: "bakery" });
     expect(run.values.activity_description).toBe("bakery");

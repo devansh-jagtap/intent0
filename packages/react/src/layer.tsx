@@ -8,7 +8,7 @@ import {
   fallbackUrl,
   findFlow,
   goBack,
-  resolveAction,
+  buildRequest,
   startFlow,
   validatePage,
   withFallback,
@@ -41,6 +41,14 @@ export interface Intent0LayerProps {
   lang?: string;
 }
 
+/** "referenceId" / "reference_id" → "Reference ID" for the result screen. */
+const humanize = (key: string) =>
+  key
+    .replace(/_/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/\bid\b/gi, "ID")
+    .replace(/^./, (c) => c.toUpperCase());
+
 /** Same-origin path for a manifest URL, so the layer works on any host or port. */
 const sitePath = (url: string) => {
   const u = new URL(url);
@@ -54,9 +62,8 @@ async function postJson(url: string, body: unknown, signal?: AbortSignal) {
   return data;
 }
 
-/** Calls the site's own backend endpoint for a step, exactly as the manifest says. */
-async function callSiteAction(method: string, url: string, body: Record<string, unknown>) {
-  const path = sitePath(url);
+/** Calls the site's own backend endpoint (a same-origin path) for a step, exactly as the manifest says. */
+async function callSiteAction(method: string, path: string, body: Record<string, unknown>) {
   let res: Response;
   if (method === "GET") {
     const u = new URL(path, window.location.origin);
@@ -164,20 +171,28 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
     const values: Record<string, unknown> = {};
     for (const f of step.fields) {
       const v = form.get(f.name);
-      if (v instanceof File) {
+      // Send real types, as the site's own forms would: a ticked box is true, numbers are numbers.
+      if (f.type === "checkbox") values[f.name] = v !== null;
+      else if (v instanceof File) {
         if (v.size > 0) values[f.name] = v;
-      } else if (typeof v === "string" && v.trim() !== "") values[f.name] = v.trim();
+      } else if (typeof v === "string" && v.trim() !== "") {
+        const n = Number(v.trim());
+        values[f.name] = f.type === "number" && Number.isFinite(n) ? n : v.trim();
+      }
     }
 
-    const action = resolveAction(manifest, run.flowId, step.id);
-    if (!action) return goToFallback(run.flowId, "no approved action for this step");
     const available: Record<string, unknown> = { ...run.values, ...values, ...run.outputs };
-    const body = Object.fromEntries(action.sends.filter((k) => available[k] !== undefined).map((k) => [k, available[k]]));
+    const request = buildRequest(manifest, run.flowId, step.id, available);
+    if (!request) return goToFallback(run.flowId, "no approved action for this step");
+    if ("error" in request) {
+      setError(`Please fill in all required details (${request.error}).`);
+      return;
+    }
 
     setBusy(true);
     setError(undefined);
     setFieldErrors({});
-    const res = await callSiteAction(action.method, action.url, body);
+    const res = await callSiteAction(request.method, request.path, request.body);
     setBusy(false);
 
     if (!res.ok) {
@@ -285,11 +300,14 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
             {phase.kind === "done" && run && flow && (
               <div className="i0-done">
                 <p className="i0-ok">✓ {flow.title}: done</p>
-                {(flow.steps.at(-1)?.action?.returns ?? []).map((k) => (
-                  <p key={k} className="i0-text">
-                    {k.replaceAll("_", " ")}: <b className="i0-mono">{String(run.outputs[k])}</b>
-                  </p>
-                ))}
+                {(flow.steps.at(-1)?.action?.returns ?? [])
+                  // Show simple values only (text, numbers); lists like a status history stay on the site's own pages.
+                  .filter((k) => ["string", "number"].includes(typeof run.outputs[k]))
+                  .map((k) => (
+                    <p key={k} className="i0-text">
+                      {humanize(k)}: <b className="i0-mono">{String(run.outputs[k])}</b>
+                    </p>
+                  ))}
                 {flow.alsoNeed?.approved && (
                   <div className="i0-also">
                     <p className="i0-h3">You may also need</p>

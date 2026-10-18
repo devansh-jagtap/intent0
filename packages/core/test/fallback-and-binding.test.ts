@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { builtinCatalog, fallbackUrl, resolveAction, validatePage, withFallback } from "../src/index";
+import { Manifest } from "@intent0/schema";
+import { buildRequest, builtinCatalog, fallbackUrl, resolveAction, validatePage, withFallback } from "../src/index";
 import { manifest, validIdentityPage } from "./fixtures";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -38,6 +39,45 @@ describe("withFallback", () => {
       check: (p) => validatePage(p, manifest, builtinCatalog),
     });
     expect(out).toMatchObject({ kind: "fallback", reason: "invalid" });
+  });
+});
+
+describe("buildRequest (path values)", () => {
+  const withPathParam = Manifest.parse({
+    ...structuredClone(manifest),
+    flows: [
+      {
+        id: "track_status",
+        title: "Track",
+        description: "Track an application",
+        auth: "public",
+        fallbackPath: "/track",
+        steps: [
+          {
+            id: "lookup",
+            title: "Find it",
+            kind: "form",
+            fields: [
+              { name: "referenceId", label: "Reference", type: "text" },
+              { name: "lang", label: "Language", type: "text", required: false },
+            ],
+            action: { method: "GET", path: "/api/status/{referenceId}", sends: ["referenceId", "lang"], returns: ["status"] },
+          },
+        ],
+      },
+    ],
+  });
+
+  it("fills {placeholders} into the path, URL-encoded, and keeps them out of the body", () => {
+    expect(buildRequest(withPathParam, "track_status", "lookup", { referenceId: "DLA 2026/1", lang: "hi" })).toEqual({
+      method: "GET",
+      path: "/api/status/DLA%202026%2F1",
+      body: { lang: "hi" },
+    });
+  });
+
+  it("refuses to call the endpoint when a path value is missing", () => {
+    expect(buildRequest(withPathParam, "track_status", "lookup", {})).toEqual({ error: "missing value for referenceId" });
   });
 });
 

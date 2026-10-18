@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { Id, SitePath } from "./common";
+import { Id, Key, SitePath, pathParams } from "./common";
 import { ModelConfig } from "./model";
 
 export const FieldType = z.enum([
@@ -19,7 +19,7 @@ export type FieldType = z.infer<typeof FieldType>;
 
 export const Field = z
   .strictObject({
-    name: Id,
+    name: Key,
     label: z.string().min(1),
     type: FieldType,
     required: z.boolean().default(true),
@@ -48,11 +48,12 @@ export type Field = z.infer<typeof Field>;
 /** The existing backend endpoint a step calls. The page never contains this; the core looks it up. */
 export const Action = z.strictObject({
   method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
+  /** May contain {key} placeholders filled at call time, e.g. "/api/status/{referenceId}". Each must be in sends. */
   path: SitePath,
   /** Field names (from this or earlier steps) and outputs (from earlier steps) sent to the endpoint. */
-  sends: z.array(Id).default([]),
+  sends: z.array(Key).default([]),
   /** Values the endpoint returns that later steps depend on, e.g. "otp_request_id". */
-  returns: z.array(Id).default([]),
+  returns: z.array(Key).default([]),
 });
 export type Action = z.infer<typeof Action>;
 
@@ -63,7 +64,7 @@ export const Step = z.strictObject({
   fields: z.array(Field).default([]),
   action: Action.optional(),
   /** Outputs from earlier steps this step cannot start without. */
-  needs: z.array(Id).default([]),
+  needs: z.array(Key).default([]),
 });
 export type Step = z.infer<typeof Step>;
 
@@ -130,6 +131,15 @@ export const Flow = z
               code: "custom",
               message: `sends "${sent}", which is not a field or an earlier output`,
               path: at("action", "sends"),
+            });
+          }
+        }
+        for (const param of pathParams(step.action.path)) {
+          if (!step.action.sends.includes(param)) {
+            ctx.addIssue({
+              code: "custom",
+              message: `path uses {${param}}, which must also be listed in sends`,
+              path: at("action", "path"),
             });
           }
         }

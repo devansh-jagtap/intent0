@@ -1,5 +1,5 @@
 {
-  "name": "intent0",
+  "name": "intent0-monorepo",
   "private": true,
   "packageManager": "pnpm@12.4.2",
   "scripts": {
@@ -9,21 +9,7 @@
     "pack:intent0": "pnpm --filter intent0 pack:local"
   },
   "devDependencies": {
-    "@intent0/adapter": "workspace:*",
-    "@intent0/core": "workspace:*",
-    "@intent0/react": "workspace:*",
-    "@intent0/schema": "workspace:*",
-    "@types/node": "^26.6.5",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "preact": "^11.0.1",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "tsup": "^9.0.0",
     "turbo": "^2.11.8",
-    "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "zod": "4.6.7"
+    "typescript": "^7.0.2"
   }
 }
