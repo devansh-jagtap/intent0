@@ -1,0 +1,9 @@
+{
+  "name": "riverton-city-services",
+  "private": true,
+  "type": "module",
+  "description": "A fictional city services website used to try intent0 (script tag + intent0 serve).",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

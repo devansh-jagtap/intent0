@@ -214,7 +214,7 @@ function finish(project: Project) {
   else if (layout === "already") log(dim("  Layout already includes <Intent0Bar />."));
   else log(yellow("  Couldn't edit your root layout automatically. Add <Intent0Bar /> inside <body> yourself."));
 
-  log(bold("\nDone.") + " Start your dev server and open the Ask tab on the left edge of your site (or press Ctrl/⌘ K).");
+  log(bold("\nDone.") + " Start your dev server and click “Ask this site” (bottom right) or press Ctrl/⌘ K.");
   log(dim("  Edit intent0.manifest.json to change tasks, then run `npx intent0 approve` (or use `npx intent0 dashboard`)."));
   agentsHint("<your site>/intent0/mcp");
 }

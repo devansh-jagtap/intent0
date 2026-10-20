@@ -166,7 +166,7 @@ function overview() {
     stat(state.model.model || "none", "model", state.model.keySet ? "key saved in .env.local" : "no key: simple keyword mode"),
   ));
   out.push(h("div", { class: "card" }, h("h2", {}, "How visitors use this site"),
-    h("p", { class: "muted" }, "Visitors open the Ask tab on the left edge of the site (or press Ctrl/⌘ K) and say what they want. intent0 picks one of the tasks below, builds its step pages and submits to your own APIs, or answers from Site Memory with cited sources. Anything not approved here is never offered."),
+    h("p", { class: "muted" }, "Visitors click \"Ask this site\" (bottom right) or press Ctrl/⌘ K and say what they want. intent0 picks one of the tasks below, builds its step pages and submits to your own APIs, or answers from Site Memory with cited sources. Anything not approved here is never offered."),
     h("div", { class: "row", style: "margin-top:12px" }, h("button", { onclick: () => { view = "tasks"; render(); } }, "Review tasks"), h("button", { class: "ghost", onclick: () => { view = "try"; render(); } }, "Try a request"))));
   return out;
 }
