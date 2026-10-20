@@ -27,6 +27,11 @@
 - Name: Learner tests CLI (Next.js and/or script tag) on own website; next candidates: dashboard, agent tools, voice/languages, codegen adapters per language
 - Stage: script tag implemented 2026-10-18; awaiting learner feedback. Learner said "I will test it, you go forward".
 
+## Pending decision — intent0 website (2026-10-20)
+- Learner asked for a website for intent0: what it does, steps, how to use it, nice animation, video example.
+- Stage: Build checkpoint — awaiting learner's approach (audience/goal, where it lives + stack, how the video is made, page sections). Nothing built.
+- Claude noted (fact): Chromium + ffmpeg in the cloud container allow a real screen recording of apps/demo-site with the intent bar (mock model mode without a key).
+
 ## Site Memory + content pages + agents + redesign — IMPLEMENTED 2026-10-18 (uncommitted)
 - Schema: SiteMemory (pages, sections w/ path/anchor/topics, verbatim code blocks, links), ContentPage; manifest flows may be empty (docs-only sites).
 - Core: BM25 search with topic focus/exclusion (createMemoryIndex), validateContentPage (cite-required text, code by ref, approved TaskCards), agent tools (flowTool, runFlowForAgent with needs_input/needs_confirmation/resume token, searchTool, searchForAgent).
