@@ -33,6 +33,7 @@
 - Claude noted (fact): Chromium + ffmpeg in the cloud container allow a real screen recording of apps/demo-site with the intent bar (mock model mode without a key).
 - Learner decided (2026-10-20): apps/site in this repo, Next.js; video = real recording, but on "some example" site, not demo-site; commit every step; final PR with Claude co-author; update README; "make it no copy able" (meaning unclear: site anti-copy vs license); complete dashboard and agent MCP; remove apps/demo-site from GitHub (repo going public, learner will post + deploy).
 - Stage: Implementation checkpoint pending on open questions — copy-protection meaning, dashboard scope + where it runs (earlier decision: intent0-hosted), what "complete MCP" means (stdio `intent0 mcp` exists), demo-site in git history, example site for video, who deploys. Nothing built.
+- Learner requirement (2026-10-20): video is a marketing video — sells the product, makes it easy to understand, shows how useful it is. Claude explained what can be produced here (scripted animated scenes + real recorded footage, captions; no voiceover/music). Awaiting: story/audience/length/format + the six earlier open questions.
 
 ## Site Memory + content pages + agents + redesign — IMPLEMENTED 2026-10-18 (uncommitted)
 - Schema: SiteMemory (pages, sections w/ path/anchor/topics, verbatim code blocks, links), ContentPage; manifest flows may be empty (docs-only sites).
