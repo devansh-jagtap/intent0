@@ -61,8 +61,14 @@ Agents: approved flows exposed as tools ──► same manifest checks
 - test/contract.test.ts: manifest ↔ backend contract via @intent0/core (dev dependency only; site has no intent0 runtime code).
 - .claude/launch.json: "demo-site" dev server on port 3000.
 
+## Implemented (public launch, 2026-10-20)
+- packages/core/src/mcp.ts (shared MCP server), adapter /intent0/mcp, packages/intent0/src/cli/dashboard.ts + dashboard-page.ts.
+- examples/city-services (fictional example site), apps/site (marketing site + video in public/media, video sources in apps/site/video). apps/demo-site removed.
+- LICENSE: all rights reserved.
+
 ## Build and Deployment
 - pnpm 12 workspace (`packages/*`, `apps/*`), turbo 2.11; TypeScript 7, Zod 4, Vitest 5.
+- apps/site deploys on Vercel with Root Directory apps/site (learner deploys).
 - `pnpm check` runs typecheck + tests across packages. Packages export TS source directly (no build step yet).
 
 ## Unknowns

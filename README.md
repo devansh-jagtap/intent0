@@ -1,22 +1,34 @@
 # intent0
 
-Makes an existing website intent-driven. Visitors (and AI agents) say what they want; intent0 answers with the right page, built live for that request:
+**Make your website intent-driven.** Visitors and AI agents say what they want; intent0 builds the right page from the tasks you approved and sends it to your own APIs.
 
-Visitors open it from the **Ask** tab on the left edge of the screen (or Ctrl/⌘ K). The answer appears in a panel over the site; following a source link closes the panel and shows that spot on the real page.
+[![Watch the 1-minute video](apps/site/public/media/poster.jpg)](apps/site/public/media/intent0.mp4)
 
-- **Tasks**: guided step pages for things the site can do (apply, register, book, track), submitted to the site's own APIs, using only tasks the company approved.
-- **Information**: pages answering questions from the site's own content (docs, guides, help pages), with every statement cited and every code example copied exactly from the docs.
-- **AI agents**: the same approved tasks and content search as tools, in the browser (WebMCP) and for desktop agents (MCP).
+_A real recording on [Riverton City Services](examples/city-services), the fictional example site in this repository ([MP4](apps/site/public/media/intent0.mp4))._
+
+- **Tasks**: guided step pages for things the site can do (apply, register, book, report, track), submitted to the site's own APIs, using only tasks the company approved.
+- **Answers**: questions answered from the site's own content (docs, guides, help pages), with every statement cited and every code example copied exactly.
+- **AI agents**: the same approved tasks and content search as tools, over MCP (HTTP or stdio) and WebMCP in the browser.
+
+Visitors click **Ask this site** (or press Ctrl/⌘ K). The answer appears over the site; following a source link closes it and shows that spot on the real page.
+
+## How it works
+
+1. **Read your code.** `intent0 init` scans your routes and forms and, with the model you choose, maps them into user tasks: fields, order, and the endpoint each step calls.
+2. **Approve the tasks.** You review them in the terminal or with `intent0 dashboard`. Only approved, enabled tasks are ever offered.
+3. **Visitors say what they want.** intent0 picks the matching task or answers from Site Memory.
+4. **The right page, sent to your API.** Step pages are built live, checked before they're shown, and submitted to your own endpoints. If anything fails, the visitor lands on your original page.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `intent0 init` | Reads your code, maps it into tasks (with your chosen model), asks you to approve them, builds Site Memory from your content, and adds the intent bar |
-| `intent0 index` | Rebuilds Site Memory (`intent0.memory.json`) from your Markdown/MDX docs. `--crawl http://localhost:3000` also reads your running site's pages |
+| `intent0 dashboard` | A page on your own computer to turn tasks on/off, fix wording and endpoints, approve a new revision, rebuild Site Memory, change the model, see what agents get and try a request |
+| `intent0 index` | Rebuilds Site Memory (`intent0.memory.json`) from your Markdown/MDX docs and your running site's pages |
 | `intent0 approve` | Checks `intent0.manifest.json` after you edit it and marks it approved |
 | `intent0 serve` | The intent0 server for sites that aren't Next.js (port 4100); add `<script src="http://localhost:4100/intent0.js" defer></script>` to your pages |
-| `intent0 mcp` | Offers your site's public approved tasks and `search_site` to AI agents such as Claude Desktop or Cursor (`--dir <project>`, `--site <url>`) |
+| `intent0 mcp` | Offers your site's public approved tasks and `search_site` to AI agents such as Claude Desktop or Cursor over stdio (`--dir <project>`, `--site <url>`) |
 
 What intent0 writes into your project:
 
@@ -25,19 +37,28 @@ What intent0 writes into your project:
 - `.env.local`: your model settings and key (never sent to the browser or committed).
 - Next.js only: `app/intent0/[action]/route.ts` and `components/intent0-bar.tsx`, added to your root layout.
 
-## Try intent0 on your own website
+## Try it
 
-First build the package once in this repo:
+intent0 isn't published to npm yet. Build the package once in this repository:
 
 ```bash
+pnpm install
 pnpm pack:intent0        # creates packages/intent0/intent0-0.0.1.tgz
+```
+
+The quickest way to see it is the example site, which needs no model key:
+
+```bash
+cd examples/city-services
+node server.js                                  # http://localhost:5050
+node ../../packages/intent0/dist/cli.js serve   # intent0 next to it
 ```
 
 ### Next.js (App Router) websites
 
 ```bash
 # in your website's folder
-npm install C:/path/to/intent0/packages/intent0/intent0-0.0.1.tgz
+npm install /path/to/intent0/packages/intent0/intent0-0.0.1.tgz
 npx intent0 init
 ```
 
@@ -45,11 +66,11 @@ npx intent0 init
 
 ```bash
 # in your website's folder
-npx --package=C:/path/to/intent0/packages/intent0/intent0-0.0.1.tgz intent0 init
-npx --package=C:/path/to/intent0/packages/intent0/intent0-0.0.1.tgz intent0 serve
+npx --package=/path/to/intent0-0.0.1.tgz intent0 init
+npx --package=/path/to/intent0-0.0.1.tgz intent0 serve
 ```
 
-Then add the script tag to your pages (or shared layout/footer), before `</body>`. Options: `data-lang="hi"`, `data-accent="#0f766e"`, `data-mount="#some-element"`.
+Then add the script tag to your pages (or shared layout/footer), before `</body>`. Options: `data-lang="hi"`, `data-accent="#0f766e"`, `data-mount="#some-element"`. Your backend needs to answer with JSON.
 
 ### Docs/content sites
 
@@ -57,14 +78,16 @@ A site with no forms (for example, a documentation site) works as an information
 
 ### AI agents (Claude Desktop, Cursor, …)
 
-Add intent0 as an MCP server in the agent's config, for example:
+A running site answers MCP over HTTP at `/intent0/mcp` (Next.js route or `intent0 serve`). When you deploy, set `INTENT0_SITE_URL` to the site's live address so agents' task calls go there.
+
+For desktop agents that start their own servers, add intent0 to the agent's config:
 
 ```json
 {
   "mcpServers": {
     "my-site": {
       "command": "npx",
-      "args": ["intent0", "mcp", "--dir", "C:/path/to/your/site", "--site", "http://localhost:3000"]
+      "args": ["intent0", "mcp", "--dir", "/path/to/your/site", "--site", "http://localhost:3000"]
     }
   }
 }
@@ -85,10 +108,12 @@ Agents get only public approved tasks (sign-in tasks stay in the browser), must 
 | Path | What it is |
 |---|---|
 | `packages/schema` | File formats (Zod): manifest, flows, pages, information pages, Site Memory |
-| `packages/core` | Deterministic logic: page and content validation, flow runner, search, agent tools |
-| `packages/adapter` | Server part: intent understanding, page generation, information answers, search |
+| `packages/core` | Deterministic logic: page and content validation, flow runner, search, agent tools, MCP server |
+| `packages/adapter` | Server part: intent understanding, page generation, information answers, search, MCP over HTTP |
 | `packages/react` | The intent bar and sheet (React), WebMCP tools |
-| `packages/intent0` | The installable package: CLI, `intent0/server`, `intent0/react`, script-tag build |
+| `packages/intent0` | The installable package: CLI (incl. dashboard), `intent0/server`, `intent0/react`, script-tag build |
+| `apps/site` | The intent0 website (Next.js), with the product video and its source |
+| `examples/city-services` | Riverton City Services: a fictional city website for trying intent0 without Next.js |
 
 ## Development
 
@@ -96,5 +121,10 @@ Requires Node 20+ and pnpm.
 
 ```bash
 pnpm install
-pnpm check        # typecheck + tests for every package
+pnpm check                              # typecheck + tests for every package
+pnpm --filter @intent0/site dev         # the website on http://localhost:3000
 ```
+
+## Licence
+
+Copyright © 2026 Devansh Jagtap. All rights reserved. The source is public to read; it may not be copied, modified or redistributed without written permission. See [LICENSE](LICENSE).

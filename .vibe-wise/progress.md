@@ -27,9 +27,18 @@
 - Name: Learner tests CLI (Next.js and/or script tag) on own website; next candidates: dashboard, agent tools, voice/languages, codegen adapters per language
 - Stage: script tag implemented 2026-10-18; awaiting learner feedback. Learner said "I will test it, you go forward".
 
+## Public launch work — IMPLEMENTED 2026-10-20 (branch ccr-96a2cd02-2seavt, one commit per step)
+- Removed apps/demo-site (going forward only; still in git history). Its manifest stays in examples/ as the test fixture. README converted from UTF-16 to UTF-8; personal paths dropped from .claude/launch.json.
+- MCP: one transport-agnostic JSON-RPC server in core (createMcpServer, httpSiteCall refuses paths leaving the site origin); stdio `intent0 mcp` and new HTTP endpoint /intent0/mcp (adapter → Next route + `intent0 serve`) share it. INTENT0_SITE_URL sets where agent calls go once deployed. Verified: agent filed RPT-2026-04102 on the example via HTTP MCP.
+- `intent0 dashboard` (local, 127.0.0.1, per-run token, Host check, CSP): overview, tasks edit (on/off, wording, fallback, auth, irreversible, endpoint method/path, field labels/required/help), Save & approve (validated, revision+1, 409 on stale), Site Memory rebuild, model settings (key written to .env.local, never returned), agents view with MCP config, try a request, raw JSON. 6 tests. Deviation from learner's earlier "intent0-hosted dashboard" decision — flagged.
+- examples/city-services: fictional zero-dependency city site (node:http + static HTML), hand-written manifest (4 tasks), Site Memory via crawl.
+- Marketing video (61 s, 1080p, captions, no audio): real CDP-screencast footage on the example (keyword mode, no model) composed into animated scenes; mp4 + webm + poster in apps/site/public/media; sources in apps/site/video.
+- apps/site: Next.js 16 + Tailwind 4 one-page site (animated hero demo, maze, video, how it works, agents, dashboard screenshot, rules, setup tabs, FAQ), no-copy (user-select none + copy/cut/contextmenu/drag blocked; copy buttons on commands), LICENSE all rights reserved (Claude's interpretation of "no copy able").
+- Found: committed intent bar is the bottom-right "Ask this site" button, not the left-edge tab recorded on 2026-10-18 (likely uncommitted on learner's machine); CLI/dashboard/README text matched to the committed code.
+
 ## Pending decision — intent0 website (2026-10-20)
 - Learner asked for a website for intent0: what it does, steps, how to use it, nice animation, video example.
-- Stage: Build checkpoint — awaiting learner's approach (audience/goal, where it lives + stack, how the video is made, page sections). Nothing built.
+- Stage: implemented 2026-10-20 (see Public launch work); awaiting learner review of the PR.
 - Claude noted (fact): Chromium + ffmpeg in the cloud container allow a real screen recording of apps/demo-site with the intent bar (mock model mode without a key).
 - Learner decided (2026-10-20): apps/site in this repo, Next.js; video = real recording, but on "some example" site, not demo-site; commit every step; final PR with Claude co-author; update README; "make it no copy able" (meaning unclear: site anti-copy vs license); complete dashboard and agent MCP; remove apps/demo-site from GitHub (repo going public, learner will post + deploy).
 - Stage (superseded 2026-10-20, learner said proceed): Implementation checkpoint pending on open questions — copy-protection meaning, dashboard scope + where it runs (earlier decision: intent0-hosted), what "complete MCP" means (stdio `intent0 mcp` exists), demo-site in git history, example site for video, who deploys. Nothing built.
