@@ -7,6 +7,7 @@ import { generateManifest } from "./generate";
 import { detectProject, type Project } from "./project";
 import { scanProject } from "./scan";
 import { scanAnyProject } from "./scan-generic";
+import { startDashboard } from "./dashboard";
 import { startMcp } from "./mcp";
 import { serve } from "./serve";
 import { buildMemory, topTopics } from "./index-content";
@@ -198,7 +199,8 @@ function finish(project: Project) {
     if (!project.hasIntent0Dependency) log(dim("       (intent0 isn't installed here, so run it from the package file: npx --package=<path to intent0-0.0.1.tgz> intent0 serve)"));
     log("  b) Add this line to your pages (or your shared layout/footer template), just before </body>:");
     log(green(`       <script src="http://localhost:${SERVE_PORT}/intent0.js" defer></script>`));
-    log(dim("\n  Edit intent0.manifest.json to change tasks, then run `npx intent0 approve`. The server reloads it automatically.\n"));
+    log(dim("\n  Edit intent0.manifest.json to change tasks, then run `npx intent0 approve`. The server reloads it automatically."));
+    agentsHint(`http://localhost:${SERVE_PORT}/intent0/mcp`);
     return;
   }
 
@@ -212,8 +214,15 @@ function finish(project: Project) {
   else if (layout === "already") log(dim("  Layout already includes <Intent0Bar />."));
   else log(yellow("  Couldn't edit your root layout automatically. Add <Intent0Bar /> inside <body> yourself."));
 
-  log(bold("\nDone.") + " Start your dev server and look for the intent bar at the top of your site.");
-  log(dim("  Edit intent0.manifest.json to change tasks, then run `npx intent0 approve`.\n"));
+  log(bold("\nDone.") + " Start your dev server and click “Ask this site” (bottom right) or press Ctrl/⌘ K.");
+  log(dim("  Edit intent0.manifest.json to change tasks, then run `npx intent0 approve` (or use `npx intent0 dashboard`)."));
+  agentsHint("<your site>/intent0/mcp");
+}
+
+function agentsHint(httpUrl: string) {
+  log(bold("\nAI agents") + dim("  (public approved tasks + search, over MCP)"));
+  log(`  Over HTTP:  ${httpUrl}` + dim("  (set INTENT0_SITE_URL to your live address when you deploy)"));
+  log(`  Local:      npx intent0 mcp --dir ${process.cwd()}\n`);
 }
 
 function approve() {
@@ -258,8 +267,11 @@ function help() {
   intent0 approve   Validate ${MANIFEST_FILE} after you edit it and mark it approved
   intent0 serve     Run the intent0 server for script-tag websites (default port ${SERVE_PORT})
                     --port <n>   --origin <url,url>  (extra website addresses allowed to use it)
-  intent0 mcp       Serve this site's public tasks + search to AI agents (Claude Desktop, Cursor…) over MCP
+  intent0 dashboard Review and approve tasks, rebuild Site Memory, change the model and connect agents
+                    in your browser (this computer only)   --port <n> (default 4200)
+  intent0 mcp       Serve this site's public tasks + search to AI agents (Claude Desktop, Cursor…) over MCP (stdio)
                     --site <url>  (where the website runs; default: the manifest's site URL)   --dir <project folder>
+                    A running site also answers MCP over HTTP at /intent0/mcp.
 
   The model key is read from INTENT0_API_KEY or asked for, and saved only to .env.local.`);
 }
@@ -277,6 +289,7 @@ const commands: Record<string, () => unknown> = {
     if (!existsSync(manifestFile)) throw new Error(`No ${MANIFEST_FILE} here. Run \`intent0 init\` first.`);
     startMcp({ manifestFile, memoryFile: join(root, MEMORY_FILE), site: typeof flags.site === "string" ? flags.site : undefined, version: "0.0.1" });
   },
+  dashboard: () => startDashboard({ project: detectProject(process.cwd()), port: Number(flags.port ?? 4200), version: "0.0.1", log }),
   help,
 };
 

@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #f4f4f7;
+  --color-muted: #9a9bab;
+  --color-faint: #6e6f80;
+  --color-bg: #08080c;
+  --color-panel: #101017;
+  --color-line: #23232e;
+  --color-violet: #7c5cff;
+  --color-cyan: #22d3ee;
+  --color-ok: #4ade80;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* The site's text can't be selected or copied (install commands have copy buttons). */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+img,
+video {
+  -webkit-user-drag: none;
+}
+
+::selection {
+  background: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, var(--color-violet), var(--color-cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-mark {
+  background: linear-gradient(135deg, var(--color-violet), var(--color-cyan));
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse at 50% 30%, black, transparent 70%);
+}
+
+.glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(110px);
+  pointer-events: none;
+}
+
+/* A card with a soft gradient edge. */
+.edge {
+  position: relative;
+  background: linear-gradient(var(--color-panel), var(--color-panel)) padding-box,
+    linear-gradient(140deg, rgba(124, 92, 255, 0.5), rgba(255, 255, 255, 0.06) 40%, rgba(34, 211, 238, 0.35)) border-box;
+  border: 1px solid transparent;
+}
+
+/* Scroll reveal: elements start slightly lower and fade in once seen. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-delay: var(--delay, 0ms);
+}
+.reveal[data-shown] {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes float-a {
+  50% { transform: translate(80px, 60px); }
+}
+@keyframes float-b {
+  50% { transform: translate(-90px, -50px); }
+}
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(124, 92, 255, 0.45); }
+  100% { box-shadow: 0 0 0 14px rgba(124, 92, 255, 0); }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+@keyframes maze-step {
+  0%, 8% { opacity: 0; transform: translateX(-10px); }
+  14%, 62% { opacity: 1; transform: none; }
+  70%, 100% { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes maze-answer {
+  0%, 66% { opacity: 0; transform: scale(0.96); }
+  74%, 94% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+
+.float-a { animation: float-a 16s ease-in-out infinite; }
+.float-b { animation: float-b 19s ease-in-out infinite; }
+.rise-in { animation: rise-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.pulse-ring { animation: pulse-ring 1.4s ease-out infinite; }
+.caret { animation: blink 1s steps(1) infinite; }
+.marquee { animation: marquee 30s linear infinite; }
+.shimmer {
+  background: linear-gradient(90deg, #e9ebf0 0%, #f6f7f9 50%, #e9ebf0 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+.maze-step { animation: maze-step 9s ease-in-out infinite both; animation-delay: var(--delay, 0s); }
+.maze-answer { animation: maze-answer 9s ease-in-out infinite both; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .float-a, .float-b, .pulse-ring, .caret, .marquee, .shimmer, .rise-in { animation: none; }
+  .maze-step { animation: none; opacity: 1; }
+  .maze-answer { animation: none; opacity: 1; }
+}

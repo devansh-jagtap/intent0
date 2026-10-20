@@ -127,3 +127,29 @@ describe("parseJsonReply", () => {
     expect(parseJsonReply('<think>maybe {x} or {y}?</think>\n{"a":2}')).toEqual({ a: 2 });
   });
 });
+
+describe("MCP over HTTP (/intent0/mcp)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("lists public tasks and calls the website at siteUrl", async () => {
+    const fetched: string[] = [];
+    vi.stubGlobal("fetch", async (url: URL) => {
+      fetched.push(String(url));
+      return Response.json({ otp_request_id: "otp-1" });
+    });
+    const handle = createIntent0Handler({ manifest, model: null, siteUrl: "https://portal.example.gov" });
+    const list = await (await handle(post({ jsonrpc: "2.0", id: 1, method: "tools/list" }), "mcp")).json();
+    expect(list.result.tools.map((t: { name: string }) => t.name)).toEqual(["new_registration"]);
+
+    const call = await handle(post({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "new_registration", arguments: { aadhaar_number: "123412341234", name_on_aadhaar: "Asha" } } }), "mcp");
+    expect(JSON.parse((await call.json()).result.content[0].text).status).toBe("needs_input");
+    expect(fetched).toEqual(["https://portal.example.gov/api/registration/otp/send"]);
+  });
+
+  it("accepts notifications with 202 and rejects GET and bad JSON", async () => {
+    const handle = createIntent0Handler({ manifest, model: null });
+    expect((await handle(post({ jsonrpc: "2.0", method: "notifications/initialized" }), "mcp")).status).toBe(202);
+    expect((await handle(new Request("http://x/intent0/mcp"), "mcp")).status).toBe(405);
+    expect((await handle(new Request("http://x/intent0/mcp", { method: "POST", body: "{" }), "mcp")).status).toBe(400);
+  });
+});

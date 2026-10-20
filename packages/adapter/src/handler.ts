@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { builtinCatalog, createMemoryIndex, searchForAgent, validateContentPage, validatePage, type SearchHit } from "@intent0/core";
+import { builtinCatalog, createMcpServer, createMemoryIndex, httpSiteCall, searchForAgent, validateContentPage, validatePage, type SearchHit } from "@intent0/core";
 import type { ComponentCatalog, ContentPage, Flow, Manifest, PageNode, PageSpec, SiteMemory } from "@intent0/schema";
 import type { JsonModel } from "./llm";
 import { mockResolve, templatePage } from "./mock";
@@ -12,6 +12,9 @@ export interface AdapterOptions {
   catalog?: ComponentCatalog;
   /** null = no model configured; the mock is used instead. */
   model: JsonModel | null;
+  /** Where the website runs, for AI agents' calls through /intent0/mcp. Defaults to the manifest's site URL. */
+  siteUrl?: string;
+  version?: string;
 }
 
 const ResolveBody = z.object({ text: z.string().trim().min(1).max(500) });
@@ -51,7 +54,7 @@ function templateAnswer(query: string, hits: SearchHit[], tasks: Flow[], lang: s
  * The server half of intent0, mounted by the website at e.g. /intent0/[action].
  * Holds the model key. Never sees the user's form data: only their request sentence.
  */
-export function createIntent0Handler({ manifest, memory = null, catalog = builtinCatalog, model }: AdapterOptions) {
+export function createIntent0Handler({ manifest, memory = null, catalog = builtinCatalog, model, siteUrl, version = "0.0.1" }: AdapterOptions) {
   const pageCache = new Map<string, PageSpec>();
   const answerCache = new Map<string, unknown>();
   const index = memory && memory.sections.length > 0 ? createMemoryIndex(memory) : null;
@@ -65,6 +68,8 @@ export function createIntent0Handler({ manifest, memory = null, catalog = builti
     mode: model ? "model" : "mock",
     content: index ? { pages: memory!.pages.length, sections: memory!.sections.length } : null,
   };
+  // AI agents over HTTP (MCP): the same public approved tasks + search as `intent0 mcp`.
+  const mcp = createMcpServer({ manifest, index, call: httpSiteCall(new URL(siteUrl ?? manifest.site.baseUrl).origin), version });
 
   /** Tasks that look related to a request (keyword overlap), for "start this task" cards. */
   function relatedTasks(text: string, limit = 2): Flow[] {
@@ -225,6 +230,15 @@ export function createIntent0Handler({ manifest, memory = null, catalog = builti
         const body = z.object({ query: z.string().trim().min(1).max(500) }).safeParse(await request.json().catch(() => null));
         if (!body.success) return json({ error: "send {query}" }, 400);
         return json({ results: index ? searchForAgent(index, body.data.query) : [] });
+      }
+
+      // Model Context Protocol over HTTP (JSON replies, no event stream), for agents reaching a deployed site.
+      if (action === "mcp") {
+        if (request.method !== "POST") return json({ error: "MCP here takes JSON-RPC messages by POST" }, 405);
+        const message = await request.json().catch(() => undefined);
+        if (message === undefined) return json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, 400);
+        const reply = await mcp.handle(message);
+        return reply ? json(reply) : new Response(null, { status: 202 });
       }
 
       if (action === "answer" && request.method === "POST") {
