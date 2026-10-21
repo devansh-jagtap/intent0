@@ -7,10 +7,10 @@ import { generateManifest } from "./generate";
 import { detectProject, type Project } from "./project";
 import { scanProject } from "./scan";
 import { scanAnyProject } from "./scan-generic";
+import { startDashboard } from "./dashboard";
 import { startMcp } from "./mcp";
 import { serve } from "./serve";
 import { PROVIDERS } from "./providers";
-import { startDashboard } from "./dashboard";
 import { buildMemory, topTopics } from "./index-content";
 import { MANIFEST_FILE, MEMORY_FILE, ensureEnvIgnored, manifestPath, patchLayout, readEnv, writeBar, writeEnv, writeMachineRoutes, writeManifest, writeMemory, writeRoute } from "./write";
 
@@ -182,11 +182,11 @@ async function indexContent(project: Project, flags: Flags, fromInit: boolean) {
   const codeBlocks = memory.sections.reduce((n, s) => n + s.code.length, 0);
   log(`  Wrote ${MEMORY_FILE}: ${memory.pages.length} page(s), ${memory.sections.length} section(s), ${codeBlocks} code block(s), ${memory.links.length} link(s)`);
   if (memory.sections.length) log(dim(`  Main topics: ${topTopics(memory).join(", ")}`));
+  else log(dim("  No content found. Run `npx intent0 index --crawl http://localhost:3000` while your site is running to read its pages."));
   // The machine version for AI agents: /llms.txt and /llms-full.txt (Next.js; \`intent0 serve\` serves them itself).
   if (project.mode === "next" && existsSync(join(project.appDir, "intent0"))) {
     for (const f of writeMachineRoutes(project)) log(`  Created ${f}`);
   }
-  else log(dim("  No content found. Run `npx intent0 index --crawl http://localhost:3000` while your site is running to read its pages."));
 }
 
 function finish(project: Project) {
@@ -197,7 +197,8 @@ function finish(project: Project) {
     if (!project.hasIntent0Dependency) log(dim("       (intent0 isn't installed here, so run it from the package file: npx --package=<path to intent0-0.0.1.tgz> intent0 serve)"));
     log("  b) Add this line to your pages (or your shared layout/footer template), just before </body>:");
     log(green(`       <script src="http://localhost:${SERVE_PORT}/intent0.js" defer></script>`));
-    log(dim("\n  Review tasks and the model any time with `npx intent0 dashboard`. The server reloads changes automatically.\n"));
+    log(dim("\n  Review and approve tasks any time with `npx intent0 dashboard` (or edit intent0.manifest.json and run `npx intent0 approve`). The server reloads changes automatically."));
+    agentsHint(`http://localhost:${SERVE_PORT}/intent0/mcp`);
     return;
   }
 
@@ -211,8 +212,15 @@ function finish(project: Project) {
   else if (layout === "already") log(dim("  Layout already includes <Intent0Bar />."));
   else log(yellow("  Couldn't edit your root layout automatically. Add <Intent0Bar /> inside <body> yourself."));
 
-  log(bold("\nDone.") + " Start your dev server and look for the “Ask this site” button in the bottom-right corner.");
-  log(dim("  Review tasks and the model any time with `npx intent0 dashboard`.\n"));
+  log(bold("\nDone.") + " Start your dev server and click “Ask this site” (bottom right) or press Ctrl/⌘ K.");
+  log(dim("  Edit intent0.manifest.json to change tasks, then run `npx intent0 approve`, or review them with `npx intent0 dashboard`."));
+  agentsHint("<your site>/intent0/mcp");
+}
+
+function agentsHint(httpUrl: string) {
+  log(bold("\nAI agents") + dim("  (public approved tasks + search, over MCP)"));
+  log(`  Over HTTP:  ${httpUrl}` + dim("  (set INTENT0_SITE_URL to your live address when you deploy)"));
+  log(`  Local:      npx intent0 mcp --dir ${process.cwd()}\n`);
 }
 
 function approve() {
@@ -257,10 +265,11 @@ function help() {
   intent0 approve   Validate ${MANIFEST_FILE} after you edit it and mark it approved
   intent0 serve     Run the intent0 server for script-tag websites (default port ${SERVE_PORT})
                     --port <n>   --origin <url,url>  (extra website addresses allowed to use it)
-  intent0 dashboard Review tasks (switch on/off, approve), choose the model, rebuild Site Memory in your browser
-                    --port <n>  (default 4200; only reachable from this computer)
-  intent0 mcp       Serve this site's public tasks + search to AI agents (Claude Desktop, Cursor…) over MCP
+  intent0 dashboard Review and approve tasks, rebuild Site Memory, change the model and connect agents
+                    in your browser (this computer only)   --port <n> (default 4200)
+  intent0 mcp       Serve this site's public tasks + search to AI agents (Claude Desktop, Cursor…) over MCP (stdio)
                     --site <url>  (where the website runs; default: the manifest's site URL)   --dir <project folder>
+                    A running site also answers MCP over HTTP at /intent0/mcp.
 
   The model key is read from INTENT0_API_KEY or asked for, and saved only to .env.local.`);
 }
@@ -278,7 +287,7 @@ const commands: Record<string, () => unknown> = {
     if (!existsSync(manifestFile)) throw new Error(`No ${MANIFEST_FILE} here. Run \`intent0 init\` first.`);
     startMcp({ manifestFile, memoryFile: join(root, MEMORY_FILE), site: typeof flags.site === "string" ? flags.site : undefined, version: "0.0.1" });
   },
-  dashboard: () => startDashboard({ root: process.cwd(), port: Number(flags.port ?? 4200), log }),
+  dashboard: () => startDashboard({ project: detectProject(process.cwd()), port: Number(flags.port ?? 4200), version: "0.0.1", log }),
   help,
 };
 

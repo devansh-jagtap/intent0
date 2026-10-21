@@ -52,7 +52,7 @@ export function serve({ root, manifestFile, port, origins, log }: ServeOptions) 
       const memory = memoryParse?.success ? memoryParse.data : null;
       loaded = {
         mtime,
-        handle: createIntent0Handler({ manifest, memory, model, siteUrl: manifest.site.baseUrl }),
+        handle: createIntent0Handler({ manifest, memory, model, siteUrl: env.INTENT0_SITE_URL ?? manifest.site.baseUrl }),
         allowed: new Set([new URL(manifest.site.baseUrl).origin, ...origins]),
       };
       log(
@@ -114,7 +114,8 @@ export function serve({ root, manifestFile, port, origins, log }: ServeOptions) 
     log(`  Model: ${model ? model.name : "none configured (mock mode: keyword matching + simple pages)"}`);
     log(`  Allowed website(s): ${[...first.allowed].join(", ")}`);
     log(`\n  Add this to your website's pages, just before </body>:`);
-    log(`    <script src="http://localhost:${port}/intent0.js" defer></script>\n`);
+    log(`    <script src="http://localhost:${port}/intent0.js" defer></script>`);
+    log(`\n  AI agents (MCP over HTTP): http://localhost:${port}/intent0/mcp\n`);
   });
   return server;
 }

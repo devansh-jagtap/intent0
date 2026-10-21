@@ -21,7 +21,7 @@ interface State {
   issues: string[];
   model: { provider: string | null; model: string | null; baseUrl: string | null; keySet: boolean };
   presets: Record<string, { provider: string; baseUrl: string; model: string }>;
-  memory: { pages: number; sections: number; builtAt: string; topics: string[] } | null;
+  memory: { pages: { url: string; title: string }[]; sections: number; builtAt: string; topics: string[] } | null;
 }
 interface Connection {
   api: string;
@@ -299,7 +299,7 @@ export function Dashboard() {
             <h2>Site Memory</h2>
             <p className="muted" style={{ margin: "0 0 14px", fontSize: 14 }}>
               {state.memory
-                ? `${state.memory.pages} pages, ${state.memory.sections} sections, built ${new Date(state.memory.builtAt).toLocaleString()}.`
+                ? `${state.memory.pages.length} pages, ${state.memory.sections} sections, built ${new Date(state.memory.builtAt).toLocaleString()}.`
                 : "Not built yet."}
               {state.memory?.topics.length ? ` Topics: ${state.memory.topics.join(", ")}.` : ""}
             </p>

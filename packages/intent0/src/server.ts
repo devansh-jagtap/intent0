@@ -8,6 +8,7 @@ type RouteContext = { params: Promise<{ action: string }> };
  * The model key is read from the server environment (LLM_API_KEY) and never reaches the browser.
  * Only an approved manifest is served; a draft shows nothing.
  * With Site Memory (intent0.memory.json) the bar can also answer with information pages.
+ * /intent0/mcp serves the site's public approved tasks to AI agents (MCP over HTTP).
  */
 export function createNextRoute(
   manifestJson: unknown,
@@ -26,6 +27,8 @@ export function createNextRoute(
     manifest: Manifest.parse(manifestJson),
     memory,
     model: modelFromEnv(process.env),
+    // Where agents' task calls (/intent0/mcp) go once the site is deployed.
+    siteUrl: process.env.INTENT0_SITE_URL,
   });
   const route = async (request: Request, ctx: RouteContext) => handle(request, (await ctx.params).action);
   return { GET: route, POST: route };

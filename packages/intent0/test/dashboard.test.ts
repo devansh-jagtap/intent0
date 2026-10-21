@@ -1,58 +1,77 @@
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
-import { dashboardAction, dashboardState } from "../src/cli/dashboard";
+import { describe, expect, it } from "vitest";
+import example from "../../../examples/enterprise-portal.manifest.json";
+import { createDashboardHandler } from "../src/cli/dashboard";
+import { detectProject } from "../src/cli/project";
 
-const manifest = {
-  schemaVersion: 1,
-  site: { id: "test_site", name: "Test site", baseUrl: "http://localhost:3999" },
-  revision: 1,
-  status: "draft",
-  model: { provider: "groq", model: "openai/gpt-oss-120b" },
-  flows: [
-    {
-      id: "contact",
-      title: "Contact support",
-      description: "Send a message to support.",
-      auth: "public",
-      fallbackPath: "/contact",
-      steps: [{ id: "message", title: "Your message", kind: "form", fields: [{ name: "message", label: "Message", type: "textarea" }], action: { method: "POST", path: "/api/contact", sends: ["message"] } }],
-      alsoNeed: { text: "Check the help pages.", approved: false },
-    },
-  ],
-};
+const TOKEN = "test-token-1234567890";
 
-let root: string;
-const read = () => JSON.parse(readFileSync(join(root, "intent0.manifest.json"), "utf8"));
+function setup() {
+  const root = mkdtempSync(join(tmpdir(), "intent0-dash-"));
+  writeFileSync(join(root, "intent0.manifest.json"), JSON.stringify(example));
+  writeFileSync(join(root, ".env.local"), "LLM_BASE_URL=https://api.groq.com/openai/v1\nLLM_MODEL=openai/gpt-oss-120b\nLLM_API_KEY=secret-key-value\n");
+  const handle = createDashboardHandler({ project: detectProject(root), token: TOKEN, version: "test" });
+  const call = (path: string, body?: unknown, token = TOKEN) =>
+    handle(new Request(`http://127.0.0.1:4200${path}`, { method: body === undefined ? "GET" : "POST", headers: { "x-intent0-token": token }, body: body === undefined ? undefined : JSON.stringify(body) }));
+  const manifestOnDisk = () => JSON.parse(readFileSync(join(root, "intent0.manifest.json"), "utf8"));
+  return { root, call, manifestOnDisk };
+}
 
-beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "intent0-dash-"));
-  writeFileSync(join(root, "intent0.manifest.json"), JSON.stringify(manifest));
-  writeFileSync(join(root, "package.json"), JSON.stringify({ name: "test-site" }));
-});
-
-describe("dashboard", () => {
-  it("switches tasks and their 'you may also need' note, bumping the revision", async () => {
-    await dashboardAction(root, "flow", { id: "contact", enabled: false, alsoNeedApproved: true });
-    expect(read().flows[0]).toMatchObject({ enabled: false, alsoNeed: { approved: true } });
-    expect(read().revision).toBe(2);
-    await expect(dashboardAction(root, "flow", { id: "nope", enabled: true })).rejects.toThrow(/No task/);
+describe("intent0 dashboard", () => {
+  it("refuses API calls without the token", async () => {
+    const { call } = setup();
+    expect((await call("/api/state", undefined, "wrong-token-123456789")).status).toBe(401);
   });
 
-  it("approves a draft", async () => {
-    await dashboardAction(root, "approve", {});
-    expect(read()).toMatchObject({ status: "approved", revision: 2 });
+  it("shows state without ever sending the model key", async () => {
+    const { call } = setup();
+    const res = await call("/api/state");
+    const text = await res.text();
+    expect(text).not.toContain("secret-key-value");
+    const state = JSON.parse(text);
+    expect(state.model).toMatchObject({ baseUrl: "https://api.groq.com/openai/v1", model: "openai/gpt-oss-120b", keySet: true });
+    expect(state.agents.tools.map((t: { name: string }) => t.name)).toEqual(["new_registration"]);
   });
 
-  it("saves the model key to .env.local only, and never shows it", async () => {
-    await dashboardAction(root, "model", { provider: "nvidia", model: "", baseUrl: "", apiKey: "secret-test-key" });
+  it("saves edits as a new approved revision", async () => {
+    const { call, manifestOnDisk } = setup();
+    const edited = structuredClone(example);
+    edited.flows[0]!.title = "Register your business";
+    edited.status = "draft";
+    const res = await call("/api/manifest", { manifest: edited, baseRevision: example.revision });
+    expect(res.status).toBe(200);
+    const saved = manifestOnDisk();
+    expect(saved).toMatchObject({ status: "approved", revision: example.revision + 1 });
+    expect(saved.flows[0].title).toBe("Register your business");
+  });
+
+  it("rejects invalid tasks and stale edits without writing", async () => {
+    const { call, manifestOnDisk } = setup();
+    const broken = structuredClone(example);
+    broken.flows[0]!.fallbackPath = "https://elsewhere.example";
+    const bad = await call("/api/manifest", { manifest: broken, baseRevision: example.revision });
+    expect(bad.status).toBe(422);
+    expect((await bad.json()).issues.join(" ")).toContain("fallbackPath");
+
+    const stale = await call("/api/manifest", { manifest: example, baseRevision: example.revision - 1 });
+    expect(stale.status).toBe(409);
+    expect(manifestOnDisk()).toEqual(example);
+  });
+
+  it("changes the model and keeps the old key when none is given", async () => {
+    const { call, root } = setup();
+    expect((await call("/api/model", { baseUrl: "http://localhost:11434/v1", model: "llama3.2" })).status).toBe(200);
     const env = readFileSync(join(root, ".env.local"), "utf8");
-    expect(env).toContain("LLM_API_KEY=secret-test-key");
-    expect(env).toContain("LLM_BASE_URL=https://integrate.api.nvidia.com/v1");
-    expect(JSON.stringify(read())).not.toContain("secret-test-key");
-    const state = dashboardState(root);
-    expect(state.model).toMatchObject({ keySet: true, model: "openai/gpt-oss-120b" });
-    expect(JSON.stringify(state)).not.toContain("secret-test-key");
+    expect(env).toContain("LLM_MODEL=llama3.2");
+    expect(env).toContain("LLM_API_KEY=secret-key-value");
+  });
+
+  it("tries a request against the saved tasks", async () => {
+    const { call, root } = setup();
+    writeFileSync(join(root, ".env.local"), ""); // no model: keyword matching
+    const res = await call("/api/try", { text: "I opened a bakery and want to register my business" });
+    expect(await res.json()).toMatchObject({ kind: "task", flowId: "new_registration", approved: true });
   });
 });

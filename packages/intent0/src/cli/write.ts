@@ -79,8 +79,7 @@ export function writeMachineRoutes(project: Project): string[] {
         "",
         `export const { GET } = createMachineRoute(manifest, memory, "${name}");`,
         "",
-      ].join("
-"),
+      ].join("\n"),
     );
     written.push(file);
   }

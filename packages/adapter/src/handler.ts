@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { builtinCatalog, createMcpServer, createMemoryIndex, httpSiteCall, llmsFullTxt, llmsTxt, searchForAgent, validateContentPage, validatePage, type JsonRpcMessage, type SearchHit } from "@intent0/core";
+import { builtinCatalog, createMcpServer, createMemoryIndex, httpSiteCall, llmsFullTxt, llmsTxt, searchForAgent, validateContentPage, validatePage, type JsonRpcRequest, type SearchHit } from "@intent0/core";
 import type { ComponentCatalog, ContentPage, Flow, Manifest, PageNode, PageSpec, SiteMemory } from "@intent0/schema";
 import type { JsonModel } from "./llm";
 import { mockResolve, templatePage } from "./mock";
@@ -12,8 +12,9 @@ export interface AdapterOptions {
   catalog?: ComponentCatalog;
   /** null = no model configured; the mock is used instead. */
   model: JsonModel | null;
-  /** Where the site's own pages and endpoints are, if not where this handler runs (e.g. `intent0 serve`). */
+  /** Where the site's own pages and endpoints are, if not where this handler runs (e.g. `intent0 serve`, or INTENT0_SITE_URL once deployed). */
   siteUrl?: string;
+  version?: string;
 }
 
 const ResolveBody = z.object({ text: z.string().trim().min(1).max(500) });
@@ -53,7 +54,7 @@ function templateAnswer(query: string, hits: SearchHit[], tasks: Flow[], lang: s
  * The server half of intent0, mounted by the website at e.g. /intent0/[action].
  * Holds the model key. Never sees the user's form data: only their request sentence.
  */
-export function createIntent0Handler({ manifest, memory = null, catalog = builtinCatalog, model, siteUrl }: AdapterOptions) {
+export function createIntent0Handler({ manifest, memory = null, catalog = builtinCatalog, model, siteUrl, version = "0.0.1" }: AdapterOptions) {
   // AI agents calling task tools over the web: a simple per-address limit (in memory, per server).
   const agentCalls = new Map<string, { count: number; reset: number }>();
   const AGENT_CALLS_PER_MINUTE = 30;
@@ -252,15 +253,16 @@ export function createIntent0Handler({ manifest, memory = null, catalog = builti
       // MCP over HTTP (Streamable HTTP, JSON replies): any AI agent can use the site's public tasks and search.
       if (action === "mcp") {
         if (request.method !== "POST") return new Response(null, { status: 405, headers: { allow: "POST" } });
-        const raw = (await request.json().catch(() => null)) as JsonRpcMessage | JsonRpcMessage[] | null;
-        if (!raw || typeof raw !== "object") return json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, 400);
+        const raw: unknown = await request.json().catch(() => undefined);
+        if (raw === undefined) return json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, 400);
         const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "local";
-        const server = createMcpServer({ manifest: enabledManifest, index, call: httpSiteCall(siteUrl ?? new URL(request.url).origin, "intent0-agent"), version: "0.0.1" });
-        const one = async (msg: JsonRpcMessage) => {
+        const server = createMcpServer({ manifest: enabledManifest, index, call: httpSiteCall(siteUrl ?? new URL(request.url).origin, "intent0-agent"), version });
+        const one = async (message: unknown) => {
+          const msg = (message && typeof message === "object" ? message : {}) as JsonRpcRequest;
           const tool = msg.method === "tools/call" ? String(msg.params?.name ?? "") : "";
           if (tool && tool !== "search_site" && !allowAgentCall(ip))
             return { jsonrpc: "2.0" as const, id: msg.id ?? null, error: { code: -32000, message: "Too many task calls; wait a minute and try again." } };
-          return server.handle(msg);
+          return server.handle(message);
         };
         const replies = (await Promise.all((Array.isArray(raw) ? raw : [raw]).map(one))).filter((r) => r !== null);
         // Only notifications: accepted, nothing to say.

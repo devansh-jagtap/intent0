@@ -2,55 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "demo-site",
+      "name": "site",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--filter",
-        "@intent0/demo-site",
-        "dev"
-      ],
+      "runtimeArgs": ["--filter", "@intent0/site", "dev"],
       "port": 3000
     },
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--filter",
-        "@intent0/web",
-        "dev"
-      ],
+      "runtimeArgs": ["--filter", "@intent0/web", "dev"],
       "port": 3200
-    },
-    {
-      "name": "outside-test-site",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": [
-        "--prefix",
-        "C:/Users/devan/AppData/Local/Temp/claude/C--Users-devan-OneDrive-Desktop-intent0/d892526f-03a6-46b2-9ec1-fdff8f940a17/scratchpad/outside/library-site",
-        "next",
-        "dev",
-        "C:/Users/devan/AppData/Local/Temp/claude/C--Users-devan-OneDrive-Desktop-intent0/d892526f-03a6-46b2-9ec1-fdff8f940a17/scratchpad/outside/library-site",
-        "--port",
-        "3100"
-      ],
-      "port": 3100
-    },
-    {
-      "name": "clinic-intent0-serve",
-      "runtimeExecutable": "cmd",
-      "runtimeArgs": [
-        "/c",
-        "cd /d C:\\Users\\devan\\AppData\\Local\\Temp\\claude\\C--Users-devan-OneDrive-Desktop-intent0\\d892526f-03a6-46b2-9ec1-fdff8f940a17\\scratchpad\\outside\\clinic-site && npx --yes --package=C:/Users/devan/OneDrive/Desktop/intent0/packages/intent0/intent0-0.0.1.tgz intent0 serve"
-      ],
-      "port": 4100
-    },
-    {
-      "name": "clinic-site",
-      "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "C:/Users/devan/AppData/Local/Temp/claude/C--Users-devan-OneDrive-Desktop-intent0/d892526f-03a6-46b2-9ec1-fdff8f940a17/scratchpad/outside/clinic-site/server.js"
-      ],
-      "port": 5050
     }
   ]
 }
