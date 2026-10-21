@@ -3,6 +3,11 @@ dist/
 .turbo/
 coverage/
 
+# Next.js and TypeScript build output (for every app, even one without its own .gitignore)
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
 # Secrets: API keys live only in env files, never in git
 .env
 .env.*
