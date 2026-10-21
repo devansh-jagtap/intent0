@@ -1,21 +1,15 @@
+/** intent0's mark: a navy tile with a stamped ring, the "0" a request turns into. */
 export function Mark({ size = 28 }: { size?: number }) {
   return (
-    <span
-      aria-hidden
-      className="bg-mark relative inline-block shrink-0"
-      style={{ width: size, height: size, borderRadius: size * 0.27 }}
-    >
-      <span
-        className="absolute rounded-full border-white"
-        style={{ inset: size * 0.27, borderWidth: Math.max(2, size * 0.1) }}
-      />
+    <span aria-hidden className="relative inline-block shrink-0 bg-ink" style={{ width: size, height: size, borderRadius: size * 0.26 }}>
+      <span className="absolute rounded-full" style={{ inset: size * 0.24, borderWidth: Math.max(2, size * 0.11), borderColor: "#a996ff" }} />
     </span>
   );
 }
 
 export function Logo({ size = 28 }: { size?: number }) {
   return (
-    <span className="inline-flex items-center gap-2.5 font-semibold tracking-tight" style={{ fontSize: size * 0.72 }}>
+    <span className="inline-flex items-center gap-2.5 font-extrabold tracking-[-0.03em]" style={{ fontSize: size * 0.76 }}>
       <Mark size={size} />
       intent0
     </span>

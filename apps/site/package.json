@@ -5,17 +5,22 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 3000",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@intent0/adapter": "workspace:*",
+    "@intent0/react": "workspace:*",
+    "@intent0/schema": "workspace:*",
     "lucide-react": "^1.58.0",
+    "marked": "^16.4.0",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@intent0/core": "workspace:*",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

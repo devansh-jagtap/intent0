@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CodeCopy } from "@/components/code-copy";
 import { allDocs, renderDoc } from "@/lib/docs";
 
 export function generateStaticParams() {
@@ -36,6 +37,7 @@ export default async function DocPage({ params }: PageProps<"/docs/[slug]">) {
       </nav>
       <article>
         <div className="prose" dangerouslySetInnerHTML={{ __html: renderDoc(doc) }} />
+        <CodeCopy slug={slug} />
         <div className="docs-next prose">
           {prev ? <Link href={`/docs/${prev.slug}`}>Previous: {prev.title}</Link> : <span />}
           {next ? <Link href={`/docs/${next.slug}`}>Next: {next.title}</Link> : <span />}

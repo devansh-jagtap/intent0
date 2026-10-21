@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // intent0 packages ship TypeScript source in this monorepo ("Ask this site" runs on intent0 itself).
+  transpilePackages: ["@intent0/core", "@intent0/schema", "@intent0/adapter", "@intent0/react"],
   turbopack: {
     rules: {
       "*.css": {

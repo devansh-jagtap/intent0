@@ -112,8 +112,7 @@ Agents get only public approved tasks (sign-in tasks stay in the browser), must 
 | `packages/adapter` | Server part: intent understanding, page generation, information answers, search, MCP over HTTP |
 | `packages/react` | The intent bar and sheet (React), WebMCP tools |
 | `packages/intent0` | The installable package: CLI (incl. dashboard), `intent0/server`, `intent0/react`, script-tag build |
-| `apps/site` | The intent0 website (Next.js), with the product video and its source |
-| `apps/web` | Docs site (`content/docs/*.md`) and the Dashboard page that connects to `intent0 dashboard`. Runs on intent0 itself |
+| `apps/site` | The intent0 website (Next.js): landing page, product video and its source, docs (`content/docs/*.md`), the Dashboard page that connects to `intent0 dashboard`, and "Ask this site" running on intent0 itself |
 | `examples/city-services` | Riverton City Services: a fictional city website for trying intent0 without Next.js |
 
 ## Development
@@ -123,8 +122,7 @@ Requires Node 20+ and pnpm.
 ```bash
 pnpm install
 pnpm check                              # typecheck + tests for every package
-pnpm --filter @intent0/site dev         # the website on http://localhost:3000
-pnpm --filter @intent0/web dev          # docs + dashboard on http://localhost:3200
+pnpm --filter @intent0/site dev         # the website (with docs and dashboard) on http://localhost:3000
 ```
 
 ## Licence

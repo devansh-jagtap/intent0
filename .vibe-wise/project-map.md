@@ -59,11 +59,11 @@ Agents: approved flows exposed as tools ──► same manifest checks
 ## Implemented (step 2, 2026-10-18)
 - apps/demo-site (Next.js 16.4, Cache Components): maze pages, traditional multi-page forms (src/app/register/new, update, print, cancel, login), mock APIs under src/app/api matching the manifest, backend helpers in src/lib/demo (store, http, rules, activity-codes), shadcn components in src/components/ui, portal chrome in src/components/portal.
 - test/contract.test.ts: manifest ↔ backend contract via @intent0/core (dev dependency only; site has no intent0 runtime code).
-- .claude/launch.json: "demo-site" dev server on port 3000.
+- .claude/launch.json: "site" dev server (apps/site) on port 3000.
 
 ## Implemented (public launch, 2026-10-20)
 - packages/core/src/mcp.ts (shared MCP server), adapter /intent0/mcp, packages/intent0/src/cli/dashboard.ts + dashboard-page.ts.
-- examples/city-services (fictional example site), apps/site (marketing site + video in public/media, video sources in apps/site/video). apps/demo-site removed.
+- examples/city-services (fictional example site), apps/site (the one intent0 website: landing page, video in public/media + sources in apps/site/video, docs from content/docs, /dashboard connecting to `intent0 dashboard`, "Ask this site" on intent0 itself). apps/demo-site and apps/web removed.
 - LICENSE: all rights reserved.
 
 ## Build and Deployment

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 // This page runs in the browser and talks to `npx intent0 dashboard` on the company's own computer.
@@ -104,6 +105,8 @@ export function Dashboard() {
   }, [api]);
 
   useEffect(() => {
+    // load() sets state only after its request to the computer returns.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (conn) void load();
   }, [conn, load]);
 
@@ -345,7 +348,7 @@ function Connect() {
         <li>Open the link it prints. It brings you back here, connected.</li>
       </ol>
       <p className="muted">
-        New to intent0? Start with <a href="/docs/getting-started">Getting started</a>.
+        New to intent0? Start with <Link href="/docs/getting-started">Getting started</Link>.
       </p>
     </div>
   );

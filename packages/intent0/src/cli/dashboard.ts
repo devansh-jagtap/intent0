@@ -22,7 +22,7 @@ import { ensureEnvIgnored, manifestPath, memoryPath, readEnv, writeEnv, writeMan
  */
 
 /** The intent0 website, whose Dashboard page can connect to this command. Override with INTENT0_WEBSITE. */
-export const WEBSITE = (process.env.INTENT0_WEBSITE ?? "http://localhost:3200").replace(/\/$/, "");
+export const WEBSITE = (process.env.INTENT0_WEBSITE ?? "http://localhost:3000").replace(/\/$/, "");
 
 export interface DashboardOptions {
   project: Project;

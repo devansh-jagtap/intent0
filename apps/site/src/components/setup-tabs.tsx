@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
 import { useState } from "react";
+import { CopyButton } from "@/components/copy-button";
 
 type Tab = { id: string; label: string; intro: string; steps: { note: string; code: string }[]; after?: string };
 
@@ -54,34 +54,12 @@ const TABS: Tab[] = [
   },
 ];
 
-function CopyButton({ text }: { text: string }) {
-  const [done, setDone] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          setDone(true);
-          setTimeout(() => setDone(false), 1600);
-        } catch {
-          /* clipboard unavailable */
-        }
-      }}
-      className="absolute top-2.5 right-2.5 grid size-8 place-items-center rounded-md border border-line bg-panel text-muted transition hover:text-ink"
-      aria-label={done ? "Copied" : "Copy"}
-    >
-      {done ? <Check className="size-4 text-ok" /> : <Copy className="size-4" />}
-    </button>
-  );
-}
-
 export function SetupTabs() {
   const [active, setActive] = useState("next");
   const tab = TABS.find((t) => t.id === active)!;
   return (
-    <div className="edge rounded-2xl p-2 sm:p-3">
-      <div role="tablist" aria-label="Where you use intent0" className="flex gap-1 overflow-x-auto rounded-xl bg-bg/60 p-1">
+    <div className="rounded-[18px] border border-rule bg-sheet">
+      <div role="tablist" aria-label="Where you use intent0" className="flex gap-1 overflow-x-auto border-b border-rule px-2 pt-2 sm:px-4">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -89,27 +67,29 @@ export function SetupTabs() {
             type="button"
             aria-selected={t.id === active}
             onClick={() => setActive(t.id)}
-            className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${t.id === active ? "bg-white/10 text-ink" : "text-muted hover:text-ink"}`}
+            className={`-mb-px shrink-0 cursor-pointer border-b-[3px] px-4 py-3 text-[15px] font-semibold transition-colors ${t.id === active ? "border-stamp text-ink" : "border-transparent text-pencil hover:text-ink"}`}
           >
             {t.label}
           </button>
         ))}
       </div>
-      <div role="tabpanel" key={tab.id} className="rise-in grid grid-cols-[minmax(0,1fr)] gap-4 p-3 sm:p-5">
-        <p className="text-muted">{tab.intro}</p>
-        {tab.steps.map((s, i) => (
-          <div key={i} className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
-            <p className="text-sm text-faint">
-              <span className="mr-2 font-mono text-cyan">{String(i + 1).padStart(2, "0")}</span>
-              {s.note}
-            </p>
-            <div className="relative">
-              <pre className="overflow-x-auto rounded-xl border border-line bg-[#0b0b10] p-4 pr-14 font-mono text-[13px] leading-relaxed text-[#d4d4dc]">{s.code}</pre>
-              <CopyButton text={s.code} />
-            </div>
-          </div>
-        ))}
-        {tab.after && <p className="text-sm text-muted">{tab.after}</p>}
+      <div role="tabpanel" key={tab.id} className="rise grid grid-cols-[minmax(0,1fr)] gap-5 p-4 sm:p-7">
+        <p className="m-0 max-w-[62ch] text-pencil">{tab.intro}</p>
+        <ol className="m-0 grid list-none gap-5 p-0">
+          {tab.steps.map((s, i) => (
+            <li key={i} className="grid min-w-0 grid-cols-[28px_minmax(0,1fr)] gap-x-3">
+              <span className="grid size-7 place-items-center rounded-full bg-paper text-[14px] font-bold text-ink">{i + 1}</span>
+              <div className="grid min-w-0 gap-2">
+                <p className="m-0 pt-0.5 text-[15px]">{s.note}</p>
+                <div className="relative">
+                  <pre className="m-0 overflow-x-auto rounded-xl bg-night p-4 pr-14 text-[13.5px] leading-relaxed text-night-ink">{s.code}</pre>
+                  <CopyButton text={s.code} className="absolute top-2.5 right-2.5" />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+        {tab.after && <p className="m-0 max-w-[62ch] text-[15px] text-pencil">{tab.after}</p>}
       </div>
     </div>
   );

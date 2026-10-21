@@ -238,3 +238,9 @@
 - Built (Claude): apps/web (Next.js, port 3200): landing page with a live hero demo (crowded portal, "renew my passport", Generating your experience, built page), docs from content/docs/*.md, Dashboard page, and "Ask this site" powered by intent0 from the docs.
 - Design choice (Claude, open to change): the website's Dashboard connects in the browser to `intent0 dashboard` on the company's computer (link carries address + token; CORS only for the website's origin). No accounts or database, files and key never leave the company's machine, free to host. A cloud dashboard with sign-in would need auth + a database.
 - Not done: deploying the website (needs the learner's Vercel account/domain; then set INTENT0_WEBSITE in the CLI default), npm publishing, a model key for the website's own "Ask this site" (works without one, from the docs only).
+
+## One website (apps/site) — 2026-10-21
+- Learner asked: one website with all the features, delete the older/worse one, nice animation, "use skill" (/tasteskill isn't installed; Claude used frontend-design).
+- Built (Claude): apps/site now has the landing page, product video, docs (/docs, from content/docs), the Dashboard page (/dashboard, connects to `intent0 dashboard`) and "Ask this site" on intent0 itself. apps/web (19 Oct) deleted; `intent0 dashboard` now links to http://localhost:3000/dashboard (INTENT0_WEBSITE overrides).
+- Design (Claude's choice, open to change): government-form look (cool paper, navy ink, violet rubber-stamp accent, Schibsted Grotesk). Hero: 8 menu clicks swept into one sentence, the form builds, a RECEIVED stamp lands; answers get their source highlighted. Pauses off screen; reduced motion shows the finished state.
+- Verified: typecheck + 80 tests pass, site lint clean; browser at 1440 px and 375 px; the website's Dashboard connected to `intent0 dashboard` on examples/city-services; "Ask this site" answered from the docs without a model.
