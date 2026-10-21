@@ -6,3 +6,5 @@ export { builtinCatalog } from "./builtin-catalog";
 export { createMemoryIndex, tokenize, stem, type MemoryIndex, type SearchHit } from "./search";
 export { validateContentPage, contentCatalog, type ContentAllowed, type ContentValidation } from "./validate-content";
 export { flowTool, runFlowForAgent, searchForAgent, searchTool, type AgentTool, type AgentResult, type SiteCall } from "./agent";
+export { createMcpServer, agentFlows, httpSiteCall, type JsonRpcMessage, type JsonRpcReply, type McpOptions } from "./mcp";
+export { llmsTxt, llmsFullTxt } from "./machine";

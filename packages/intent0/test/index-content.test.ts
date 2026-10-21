@@ -81,3 +81,10 @@ describe("CLI helpers", () => {
     expect(routeMatches("/api/status/[id]", "/api/status")).toBe(false);
   });
 });
+
+describe("Markdown inline code", () => {
+  it("keeps inline code exactly, even when it looks like HTML", () => {
+    const d = parseMarkdown("# Setup\nAdd it before `</body>` and call `search_site`.", "/docs/setup", "docs/setup.md");
+    expect(d.sections[0]!.parts).toContainEqual({ text: "Add it before </body> and call search_site." });
+  });
+});

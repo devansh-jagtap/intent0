@@ -52,6 +52,10 @@ export const INTENT0_CSS = `
 .i0-intent{flex:1;min-width:0;width:100%;height:44px;border:1px solid var(--i0-line);border-radius:10px;padding:0 14px;font:inherit;font-size:15px;background:var(--i0-paper);color:var(--i0-ink)}
 .i0-intent::placeholder{color:var(--i0-muted)}
 .i0-intent:focus{outline:none;border-color:var(--i0-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--i0-accent) 18%,transparent)}
+.i0-mic{flex:none;display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--i0-line);border-radius:10px;background:var(--i0-paper);color:var(--i0-muted);cursor:pointer}
+.i0-mic:hover{color:var(--i0-accent);border-color:var(--i0-accent)}
+.i0-mic[data-on]{color:#fff;background:var(--i0-bad);border-color:var(--i0-bad)}
+@media (prefers-reduced-motion:no-preference){.i0-mic[data-on]{animation:i0-pulse 1s ease-in-out infinite}}
 .i0-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .i0-idle{padding:18px 20px;display:grid;gap:10px;font-size:14px}
 .i0-suggest{display:flex;flex-wrap:wrap;gap:6px}

@@ -52,7 +52,7 @@ export function serve({ root, manifestFile, port, origins, log }: ServeOptions) 
       const memory = memoryParse?.success ? memoryParse.data : null;
       loaded = {
         mtime,
-        handle: createIntent0Handler({ manifest, memory, model }),
+        handle: createIntent0Handler({ manifest, memory, model, siteUrl: manifest.site.baseUrl }),
         allowed: new Set([new URL(manifest.site.baseUrl).origin, ...origins]),
       };
       log(
@@ -83,7 +83,8 @@ export function serve({ root, manifestFile, port, origins, log }: ServeOptions) 
         return void res.end(readFileSync(scriptFile));
       }
 
-      const action = /^\/intent0\/(\w+)$/.exec(url.pathname)?.[1];
+      // /llms.txt and /llms-full.txt are also served at the root, for agents that look there.
+      const action = /^\/(?:intent0\/)?(llms(?:-full)?\.txt)$/.exec(url.pathname)?.[1] ?? /^\/intent0\/(\w+)$/.exec(url.pathname)?.[1];
       if (!action || !handle) return void res.writeHead(404).end();
       if (origin && !corsOk) {
         res.writeHead(403, { "content-type": "application/json" });
@@ -92,9 +93,9 @@ export function serve({ root, manifestFile, port, origins, log }: ServeOptions) 
 
       const body = req.method === "POST" ? await readBody(req) : undefined;
       const response = await handle(
-        new Request(`http://intent0.local${url.pathname}`, {
+        new Request(`http://${req.headers.host ?? `localhost:${port}`}${url.pathname}`, {
           method: req.method,
-          headers: { "content-type": req.headers["content-type"] ?? "application/json" },
+          headers: { "content-type": req.headers["content-type"] ?? "application/json", "x-forwarded-for": req.socket.remoteAddress ?? "" },
           body: body && body.length > 0 ? new Uint8Array(body) : undefined,
         }),
         action,

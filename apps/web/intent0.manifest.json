@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "site": { "id": "intent0_web", "name": "intent0", "baseUrl": "http://localhost:3200" },
+  "revision": 1,
+  "status": "approved",
+  "model": { "provider": "groq", "model": "openai/gpt-oss-120b" },
+  "flows": []
+}

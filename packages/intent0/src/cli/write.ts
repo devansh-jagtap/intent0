@@ -57,6 +57,36 @@ export function writeRoute(project: Project): string | null {
   return file;
 }
 
+/** app/llms.txt and app/llms-full.txt routes: the machine version of the site. Left alone if they exist. */
+export function writeMachineRoutes(project: Project): string[] {
+  const written: string[] = [];
+  const ext = project.typescript ? "ts" : "js";
+  for (const name of ["llms.txt", "llms-full.txt"] as const) {
+    const file = join(project.appDir, name, `route.${ext}`);
+    if (existsSync(file) || existsSync(join(project.root, "public", name))) continue;
+    const rel = (target: string) => {
+      const r = posix(relative(dirname(file), target));
+      return r.startsWith(".") ? r : `./${r}`;
+    };
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(
+      file,
+      [
+        "// Added by intent0. The machine version of this site for AI agents (llms.txt format).",
+        'import { createMachineRoute } from "intent0/server";',
+        `import manifest from "${rel(manifestPath(project))}";`,
+        `import memory from "${rel(memoryPath(project))}";`,
+        "",
+        `export const { GET } = createMachineRoute(manifest, memory, "${name}");`,
+        "",
+      ].join("
+"),
+    );
+    written.push(file);
+  }
+  return written;
+}
+
 /** components/intent0-bar.tsx: the client layer, wired to the site's own components when found. */
 export function writeBar(project: Project): string | null {
   const ext = project.typescript ? "tsx" : "jsx";
@@ -111,15 +141,19 @@ export function patchLayout(project: Project): "patched" | "already" | "manual" 
   return "patched";
 }
 
+/** The settings the site's server sees: .env, overridden by .env.local (as Next.js and most frameworks do). */
 export function readEnv(project: Project): Record<string, string> {
-  const file = join(project.root, ".env.local");
-  if (!existsSync(file)) return {};
-  return Object.fromEntries(
-    readFileSync(file, "utf8")
-      .split(/\r?\n/)
-      .filter((l) => /^[A-Z_][A-Z0-9_]*=/.test(l))
-      .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).trim()]),
-  );
+  const read = (name: string): Record<string, string> => {
+    const file = join(project.root, name);
+    if (!existsSync(file)) return {};
+    return Object.fromEntries(
+      readFileSync(file, "utf8")
+        .split(/\r?\n/)
+        .filter((l) => /^[A-Z_][A-Z0-9_]*=/.test(l))
+        .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).trim()]),
+    );
+  };
+  return { ...read(".env"), ...read(".env.local") };
 }
 
 /** Adds or replaces LLM_* settings in .env.local. Other lines are left alone. */

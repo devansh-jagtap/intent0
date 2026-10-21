@@ -65,14 +65,17 @@ function urlForFile(root: string, file: string, frontSlug?: string): string {
 }
 
 function cleanMarkdown(line: string): string {
+  // Inline code is kept exactly (e.g. `</body>`, `search_site`): set aside, clean the rest, put back.
+  const codes: string[] = [];
   return line
+    .replace(/`([^`]+)`/g, (_, code: string) => `\u0000${codes.push(code) - 1}\u0000`)
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/<[^>]+>/g, " ")
-    .replace(/`([^`]+)`/g, "$1")
     .replace(/(\*\*|__|\*|_|~~)(\S[^*_~]*?)\1/g, "$2")
     .replace(/^\s*(>|[-*+]|\d+\.)\s+/, "")
     .replace(/\|/g, " ")
+    .replace(/\u0000(\d+)\u0000/g, (_, i: string) => codes[Number(i)]!)
     .trim();
 }
 

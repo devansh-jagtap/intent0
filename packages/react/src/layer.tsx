@@ -79,6 +79,25 @@ function writeRemembered(values: Record<string, unknown>) {
   }
 }
 
+// The Web Speech API (Chrome, Edge, Safari). Typed loosely: it isn't in TypeScript's DOM types everywhere.
+interface SpeechResultList {
+  length: number;
+  [i: number]: { isFinal: boolean; 0?: { transcript: string } };
+}
+interface Recognizer {
+  lang: string;
+  interimResults: boolean;
+  onresult: (ev: { results: SpeechResultList }) => void;
+  onerror: (ev: { error: string }) => void;
+  onend: () => void;
+  start(): void;
+}
+function speechRecognition(): (new () => Recognizer) | undefined {
+  if (typeof window === "undefined") return undefined;
+  const w = window as unknown as Record<string, (new () => Recognizer) | undefined>;
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition;
+}
+
 /** Dark host page → dark layer. */
 function hostIsDark(): boolean {
   for (const el of [document.body, document.documentElement]) {
@@ -126,6 +145,8 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
   const [confirmed, setConfirmed] = useState(false);
   const [part, setPart] = useState(0);
   const [open, setOpen] = useState(false);
+  const [canSpeak, setCanSpeak] = useState(false);
+  const [listening, setListening] = useState(false);
   const [remembered, setRemembered] = useState(false);
   const [dark, setDark] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +163,7 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
       )
       .catch((e) => console.error("[intent0] could not load config", e));
     setDark(hostIsDark());
+    setCanSpeak(Boolean(speechRecognition()));
     setRemembered(Object.keys(readRemembered()).length > 0);
   }, [endpoint]);
 
@@ -235,8 +257,33 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
 
   async function onIntent(e: FormEvent) {
     e.preventDefault();
-    if (!text.trim()) return;
-    setAsked(text.trim());
+    await askFor(text);
+  }
+
+  /** Voice: the browser turns speech into text (nothing is recorded by intent0), then it's asked like typed text. */
+  function listen() {
+    const Recognition = speechRecognition();
+    if (!Recognition || listening) return;
+    const rec = new Recognition();
+    rec.lang = lang === "hi" ? "hi-IN" : navigator.language || "en-US";
+    rec.interimResults = true;
+    rec.onresult = (ev) => {
+      const said = Array.from(ev.results, (r) => r[0]?.transcript ?? "").join("");
+      setText(said);
+      if (ev.results[ev.results.length - 1]?.isFinal) void askFor(said);
+    };
+    rec.onerror = (ev) => {
+      if (ev.error === "not-allowed") setError("Allow the microphone to ask by voice, or type your question.");
+    };
+    rec.onend = () => setListening(false);
+    setListening(true);
+    rec.start();
+  }
+
+  async function askFor(value: string) {
+    const text = value.trim();
+    if (!text) return;
+    setAsked(text);
     setError(undefined);
     setRun(undefined);
     setPhase({ kind: "thinking", label: "Understanding what you need" });
@@ -418,6 +465,21 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
                 aria-label="What do you want to do?"
                 className="i0-intent"
               />
+              {canSpeak && (
+                <button
+                  type="button"
+                  className="i0-mic"
+                  onClick={listen}
+                  data-on={listening ? "" : undefined}
+                  aria-label={listening ? "Listening…" : "Ask by voice"}
+                  title={listening ? "Listening…" : "Ask by voice"}
+                >
+                  <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden>
+                    <rect x="7" y="2.5" width="6" height="10" rx="3" fill="currentColor" />
+                    <path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
               <ui.Button type="submit" disabled={phase.kind === "thinking"}>
                 Ask
               </ui.Button>

@@ -27,6 +27,13 @@
 - Name: Learner tests CLI (Next.js and/or script tag) on own website; next candidates: dashboard, agent tools, voice/languages, codegen adapters per language
 - Stage: script tag implemented 2026-10-18; awaiting learner feedback. Learner said "I will test it, you go forward".
 
+## System walkthrough — 2026-10-19
+- Learner asked how everything is connected and how to learn to build the CLI and SDK.
+- Claude explained (from verified code): package roles (schema, core, adapter, react, intent0), two delivery wrappers (Next route + component vs script tag + `intent0 serve`) both ending in createIntent0Handler, request path resolve → generate → validate → direct submit, CLI anatomy (parseArgs → commands; init = detect → scan → model → generate → review → env → index → finish). Proposed a reading order (schema → core → adapter → delivery → CLI).
+- `pnpm check`: 12/12 tasks pass.
+- Awaiting learner: which part to study first and whether to read along or write a piece themselves.
+- Demonstrated understanding: none recorded yet.
+
 ## Site Memory + content pages + agents + redesign — IMPLEMENTED 2026-10-18 (uncommitted)
 - Schema: SiteMemory (pages, sections w/ path/anchor/topics, verbatim code blocks, links), ContentPage; manifest flows may be empty (docs-only sites).
 - Core: BM25 search with topic focus/exclusion (createMemoryIndex), validateContentPage (cite-required text, code by ref, approved TaskCards), agent tools (flowTool, runFlowForAgent with needs_input/needs_confirmation/resume token, searchTool, searchForAgent).
@@ -195,3 +202,16 @@
 ## Layer placement (learner's design, 2026-10-18)
 - Learner decided: no bar across the top of the site; a button on the left side of the screen opens the intent bar, and the generated answer appears as an overlay on top of the actual website.
 - Built (Claude): left-edge "Ask" tab (also Ctrl/⌘K); panel slides in from the left over a dimmed site (440px idle, 760px with an answer, full width on phones); Esc/scrim/× hide it and keep the answer; clicking a cited source closes the panel and shows that spot on the real page. Verified on the learner's portal.
+
+## Runtime page + dashboard + voice (2026-10-19)
+- Learner decided: the button sits bottom-right; asking builds the whole page at runtime, showing "Generating your experience" until it's ready.
+- Built (Claude): bottom-right "Ask this site" button opens a compact question box; after asking, the generated page fills the screen (outline of the page while generating). Microphone button uses the browser's own speech recognition (hi-IN when data-lang="hi").
+- Built (Claude): `intent0 dashboard` (127.0.0.1:4200, token link): switch tasks on/off, approve "you may also need" notes, approve the manifest, choose/test the model (key written to .env.local, never shown), rebuild Site Memory. Reads settings from .env and .env.local, as the site does.
+- Verified on the learner's portal: model test answered in 1.7 s; requests without the token are refused. 78 tests pass.
+- Not built: npm publishing (needs the learner's npm account), site header/footer around the full-screen page.
+
+## intent0 website (2026-10-19)
+- Learner decided: intent0 needs its own website to promote it, with the dashboard available on the site.
+- Built (Claude): apps/web (Next.js, port 3200): landing page with a live hero demo (crowded portal, "renew my passport", Generating your experience, built page), docs from content/docs/*.md, Dashboard page, and "Ask this site" powered by intent0 from the docs.
+- Design choice (Claude, open to change): the website's Dashboard connects in the browser to `intent0 dashboard` on the company's computer (link carries address + token; CORS only for the website's origin). No accounts or database, files and key never leave the company's machine, free to host. A cloud dashboard with sign-in would need auth + a database.
+- Not done: deploying the website (needs the learner's Vercel account/domain; then set INTENT0_WEBSITE in the CLI default), npm publishing, a model key for the website's own "Ask this site" (works without one, from the docs only).

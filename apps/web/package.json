@@ -1,0 +1,27 @@
+{
+  "name": "@intent0/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3200",
+    "build": "next build",
+    "start": "next start --port 3200",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@intent0/adapter": "workspace:*",
+    "@intent0/react": "workspace:*",
+    "@intent0/schema": "workspace:*",
+    "marked": "^16.4.0",
+    "next": "16.4.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@intent0/core": "workspace:*",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}

@@ -30,3 +30,12 @@ export function createNextRoute(
   const route = async (request: Request, ctx: RouteContext) => handle(request, (await ctx.params).action);
   return { GET: route, POST: route };
 }
+
+/**
+ * app/llms.txt/route.ts and app/llms-full.txt/route.ts: the machine version of the site for AI
+ * agents and crawlers, built from the approved manifest and Site Memory.
+ */
+export function createMachineRoute(manifestJson: unknown, memoryJson: unknown, file: "llms.txt" | "llms-full.txt"): { GET: (request: Request) => Promise<Response> } {
+  const { GET } = createNextRoute(manifestJson, memoryJson);
+  return { GET: (request: Request) => GET(request, { params: Promise.resolve({ action: file }) }) };
+}
