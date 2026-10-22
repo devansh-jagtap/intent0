@@ -249,3 +249,9 @@
 - Learner ran `npx intent0 dashboard` and got npm E404. Claude explained (fact): `intent0` was never published to npm, so npx has nothing to download; locally the CLI runs from packages/intent0/dist. Added root scripts `pnpm dashboard:example` and `pnpm intent0 <command>`; `intent0 dashboard` now takes `--dir`. Publishing to npm is the learner's step.
 - Learner decided: colours = clean white and black (rejected navy/tangerine as "old" and electric blue); keep the historical photos. Claude proposed and built a new logo (zero as a speech bubble) — a proposal, not a learner decision.
 - Learner then rejected black and white: keep the previous palette, but replace the blue (navy) with any other colour. Claude chose deep pine green #173f35 (proposal); tangerine, white, near-black and photos unchanged.
+
+## Pending decision — generated experiences for questions (2026-10-22)
+- Learner requirement: "Ask this site" must not feel like a support chatbot. A question such as "how do I set up the MCP server with Claude" should produce a live, full page in the site's own look that walks the visitor through it step by step, the easy way: "a new era" of AI-built experiences, for any kind of question.
+- Fact (Claude, from code): answers today are ContentPage specs built from 7 blocks (Section, Heading, Paragraph, List, Callout, CodeBlock, TaskCard); paragraphs must cite Site Memory, code only by reference to verbatim docs code. Result reads like a docs page in a sheet.
+- Stage: Build checkpoint — asked the learner how the model should get more freedom (model-written code vs a richer catalog of interactive blocks vs a mix) and what happens when the docs lack a needed step. Nothing built.
+- Also: all prior work committed on branch site-redesign in 8 step commits (learner asked to commit every step).
