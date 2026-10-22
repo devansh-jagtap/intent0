@@ -66,4 +66,44 @@ describe("information page rules", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errors.join("\n")).toMatch(/doesn't exist[\s\S]*isn't an approved task/);
   });
+
+  it("accepts an experience: intro, facts, a choice of guided steps and a checklist", () => {
+    const r = validateContentPage(
+      page([
+        { component: "Intro", props: { text: "Set up Prisma in your Vue app.", cites: ["s1"] } },
+        { component: "Facts", props: { items: ["A few minutes"], cites: ["s1"] } },
+        { component: "Choice", props: { label: "Which app?" }, children: [
+          { component: "Option", props: { label: "Vue" }, children: [
+            { component: "Steps", props: {}, children: [
+              { component: "Step", props: { title: "Install" }, children: [{ component: "CodeBlock", props: { ref: "c1" } }] },
+              { component: "Step", props: { title: "Check it" }, children: [{ component: "Checklist", props: { items: ["Query from a server route"], cites: ["s1"] } }] },
+            ] },
+          ] },
+          { component: "Option", props: { label: "Also Vue" }, children: [{ component: "Paragraph", props: { text: "Same steps.", cites: ["s1"] } }] },
+        ] },
+      ]),
+      allowed,
+    );
+    expect(r.ok).toBe(true);
+  });
+
+  it("rejects experience blocks in the wrong place, uncited checklists and one-option choices", () => {
+    const r = validateContentPage(
+      page([
+        { component: "Step", props: { title: "Loose step" }, children: [{ component: "Paragraph", props: { text: "x", cites: ["s1"] } }] },
+        { component: "Steps", props: {}, children: [{ component: "Paragraph", props: { text: "x", cites: ["s1"] } }] },
+        { component: "Checklist", props: { items: ["Done"] } },
+        { component: "Choice", props: { label: "Pick" }, children: [{ component: "Option", props: { label: "Only" }, children: [{ component: "Paragraph", props: { text: "x", cites: ["s1"] } }] }] },
+      ]),
+      allowed,
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      const all = r.errors.join("\n");
+      expect(all).toMatch(/Step must be directly inside Steps/);
+      expect(all).toMatch(/Steps may only contain Step/);
+      expect(all).toMatch(/Checklist must cite/);
+      expect(all).toMatch(/Choice needs at least 2/);
+    }
+  });
 });
