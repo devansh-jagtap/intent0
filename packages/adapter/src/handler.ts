@@ -1,7 +1,8 @@
 import * as z from "zod";
-import { builtinCatalog, createMcpServer, createMemoryIndex, httpSiteCall, llmsFullTxt, llmsTxt, searchForAgent, validateContentPage, validatePage, type JsonRpcRequest, type SearchHit } from "@intent0/core";
-import type { ComponentCatalog, ContentPage, Flow, Manifest, PageNode, PageSpec, SiteMemory } from "@intent0/schema";
+import { builtinCatalog, createMcpServer, createMemoryIndex, httpSiteCall, llmsFullTxt, llmsTxt, searchForAgent, validateContentPage, validatePage, type JsonRpcRequest } from "@intent0/core";
+import type { ComponentCatalog, ContentPage, Flow, Manifest, PageSpec, SiteMemory } from "@intent0/schema";
 import type { JsonModel } from "./llm";
+import { expandHits, templateExperience } from "./experience";
 import { mockResolve, templatePage } from "./mock";
 import { RESOLVE_CONTENT_RULE, answerInput, answerPrompt, generatePrompt, resolvePrompt } from "./prompts";
 
@@ -35,20 +36,6 @@ export interface ContentSources {
 }
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
-
-/** A plain, always-valid information page made directly from search results (no model). */
-function templateAnswer(query: string, hits: SearchHit[], tasks: Flow[], lang: string): ContentPage {
-  const blocks: PageNode[] = hits.slice(0, 4).map((h) => ({
-    component: "Section",
-    props: { heading: h.section.path.join(" › ") },
-    children: [
-      ...(h.section.text ? [{ component: "Paragraph", props: { text: h.section.text.slice(0, 700), cites: [h.section.id] } }] : []),
-      ...h.section.code.slice(0, 3).map((c) => ({ component: "CodeBlock", props: { ref: c.id } })),
-    ],
-  }));
-  for (const t of tasks) blocks.push({ component: "TaskCard", props: { flowId: t.id, label: t.title } });
-  return { kind: "content", lang, title: query.charAt(0).toUpperCase() + query.slice(1), blocks };
-}
 
 /**
  * The server half of intent0, mounted by the website at e.g. /intent0/[action].
@@ -128,10 +115,12 @@ export function createIntent0Handler({ manifest, memory = null, catalog = builti
     const cached = answerCache.get(key);
     if (cached) return json({ ...(cached as object), via: "cache" });
 
-    const hits = index.search(query, 6);
-    if (hits.length === 0) {
+    const found = index.search(query, 6);
+    if (found.length === 0) {
       return json({ page: null, message: "I couldn't find this on the website.", sources: { sections: {}, code: {} } });
     }
+    // The whole how-to around what matched, so a guide isn't missing its other steps.
+    const hits = expandHits(found, memory!);
     const tasks = relatedTasks(query);
     const sources: ContentSources = { sections: {}, code: {} };
     for (const h of hits) {
@@ -163,7 +152,7 @@ export function createIntent0Handler({ manifest, memory = null, catalog = builti
       }
     }
     // No model, or it couldn't follow the rules: show the matching sections themselves.
-    page ??= templateAnswer(query, hits, tasks, lang);
+    page ??= templateExperience(query, hits, tasks, lang);
     // Send only the sources the page actually uses.
     const used = JSON.stringify(page);
     const body = {
