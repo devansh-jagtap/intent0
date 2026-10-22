@@ -1,16 +1,22 @@
-/** intent0's mark: a navy tile with a stamped ring, the "0" a request turns into. */
-export function Mark({ size = 28 }: { size?: number }) {
+/**
+ * intent0's mark: a zero drawn as a tangerine speech bubble, on a pine rounded square. Say what you need;
+ * the zero is the page you didn't have to click through. `invert` is for dark backgrounds.
+ */
+export function Mark({ size = 28, invert = false }: { size?: number; invert?: boolean }) {
+  const [tile, ink] = invert ? ["#ffffff", "#173f35"] : ["#173f35", "#f7941d"];
   return (
-    <span aria-hidden className="relative inline-block shrink-0 bg-ink" style={{ width: size, height: size, borderRadius: size * 0.26 }}>
-      <span className="absolute rounded-full" style={{ inset: size * 0.24, borderWidth: Math.max(2, size * 0.11), borderColor: "#a996ff" }} />
-    </span>
+    <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden className="shrink-0">
+      <rect width="32" height="32" rx="9" fill={tile} />
+      <circle cx="16.5" cy="15" r="7" fill="none" stroke={ink} strokeWidth="3.2" />
+      <path d="M10.6 18.6 L8.4 24.6 L14.4 21.6 Z" fill={ink} />
+    </svg>
   );
 }
 
-export function Logo({ size = 28 }: { size?: number }) {
+export function Logo({ size = 28, invert = false }: { size?: number; invert?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-2.5 font-extrabold tracking-[-0.03em]" style={{ fontSize: size * 0.76 }}>
-      <Mark size={size} />
+    <span className="inline-flex items-center gap-2.5 font-extrabold tracking-[-0.04em]" style={{ fontSize: size * 0.76 }}>
+      <Mark size={size} invert={invert} />
       intent0
     </span>
   );
