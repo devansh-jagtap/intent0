@@ -88,3 +88,10 @@ describe("Markdown inline code", () => {
     expect(d.sections[0]!.parts).toContainEqual({ text: "Add it before </body> and call search_site." });
   });
 });
+
+describe("Markdown lists and code order", () => {
+  it("keeps each list item as its own line and code in its place", () => {
+    const d = parseMarkdown("# Open\nIt lives here:\n- macOS: ~/Library\n- Windows: %APPDATA%\n\n```json\n{}\n```\nThen restart.", "/docs/open", "docs/open.md");
+    expect(d.sections[0]!.parts).toEqual([{ text: "It lives here:" }, { text: "macOS: ~/Library" }, { text: "Windows: %APPDATA%" }, { lang: "json", code: "{}" }, { text: "Then restart." }]);
+  });
+});

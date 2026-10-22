@@ -26,6 +26,8 @@ export const CodeBlock = z.strictObject({
   id: NodeId,
   lang: z.string(),
   code: z.string(),
+  /** How many lines of the section's text come before this code block (its place in the section). */
+  after: z.number().int().min(0).optional(),
 });
 export type CodeBlock = z.infer<typeof CodeBlock>;
 

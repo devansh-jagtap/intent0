@@ -130,7 +130,11 @@ export function parseMarkdown(raw: string, url: string, source: string): Draft {
       continue;
     }
     if (line.trim() === "") flushPara();
-    else para.push(line);
+    else {
+      // Each list item is its own line, so steps and options stay apart.
+      if (/^\s*([-*+]|\d+\.)\s+/.test(line)) flushPara();
+      para.push(line);
+    }
   }
   flushPara();
   if (current.parts.length) draft.sections.push(current);
@@ -316,11 +320,11 @@ export async function buildMemory({ root, crawl: crawlUrl, maxPages = 150, log }
   }
 
   // Split very long sections at paragraph boundaries, keeping each code block with its text.
-  const flat: { draft: Draft; path: string[]; anchor?: string; text: string; code: { lang: string; code: string }[] }[] = [];
+  const flat: { draft: Draft; path: string[]; anchor?: string; text: string; code: { lang: string; code: string; after: number }[] }[] = [];
   for (const d of drafts) {
     for (const s of d.sections) {
       let text: string[] = [];
-      let code: { lang: string; code: string }[] = [];
+      let code: { lang: string; code: string; after: number }[] = [];
       let size = 0;
       const push = () => {
         if (text.length || code.length) flat.push({ draft: d, path: s.path.length ? s.path : [d.title], anchor: s.anchor, text: text.join("\n"), code });
@@ -333,7 +337,7 @@ export async function buildMemory({ root, crawl: crawlUrl, maxPages = 150, log }
           if (size + part.text.length > MAX_SECTION_CHARS && size > 0) push();
           text.push(part.text);
           size += part.text.length;
-        } else code.push({ lang: part.lang, code: part.code });
+        } else code.push({ lang: part.lang, code: part.code, after: text.length });
       }
       push();
     }
@@ -359,7 +363,7 @@ export async function buildMemory({ root, crawl: crawlUrl, maxPages = 150, log }
       path: f.path.map((p) => p.slice(0, 200)),
       ...(f.anchor ? { anchor: f.anchor } : {}),
       text: f.text,
-      code: f.code.map((c) => ({ id: `c${++codeCount}`, lang: c.lang, code: c.code })),
+      code: f.code.map((c) => ({ id: `c${++codeCount}`, lang: c.lang, code: c.code, after: c.after })),
       topics: topicsFor(`${f.path.join(" ")} ${f.text} ${f.code.map((c) => c.code).join(" ")}`, f.path, f.code.map((c) => c.lang), df, flat.length),
     }));
 
