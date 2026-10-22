@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { openAiCompatible } from "@intent0/adapter";
 import { Manifest, formatIssues, type ModelConfig } from "@intent0/schema";
 import { ask, askSecret, confirm } from "./ask";
@@ -266,7 +266,7 @@ function help() {
   intent0 serve     Run the intent0 server for script-tag websites (default port ${SERVE_PORT})
                     --port <n>   --origin <url,url>  (extra website addresses allowed to use it)
   intent0 dashboard Review and approve tasks, rebuild Site Memory, change the model and connect agents
-                    in your browser (this computer only)   --port <n> (default 4200)
+                    in your browser (this computer only)   --port <n> (default 4200)   --dir <project folder>
   intent0 mcp       Serve this site's public tasks + search to AI agents (Claude Desktop, Cursor…) over MCP (stdio)
                     --site <url>  (where the website runs; default: the manifest's site URL)   --dir <project folder>
                     A running site also answers MCP over HTTP at /intent0/mcp.
@@ -287,7 +287,7 @@ const commands: Record<string, () => unknown> = {
     if (!existsSync(manifestFile)) throw new Error(`No ${MANIFEST_FILE} here. Run \`intent0 init\` first.`);
     startMcp({ manifestFile, memoryFile: join(root, MEMORY_FILE), site: typeof flags.site === "string" ? flags.site : undefined, version: "0.0.1" });
   },
-  dashboard: () => startDashboard({ project: detectProject(process.cwd()), port: Number(flags.port ?? 4200), version: "0.0.1", log }),
+  dashboard: () => startDashboard({ project: detectProject(typeof flags.dir === "string" ? resolve(flags.dir) : process.cwd()), port: Number(flags.port ?? 4200), version: "0.0.1", log }),
   help,
 };
 

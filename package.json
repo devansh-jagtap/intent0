@@ -6,7 +6,10 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "check": "turbo run typecheck test",
-    "pack:intent0": "pnpm --filter intent0 pack:local"
+    "pack:intent0": "pnpm --filter intent0 pack:local",
+    "intent0": "pnpm --filter intent0 build && node packages/intent0/dist/cli.js",
+    "dashboard": "pnpm --filter intent0 build && node packages/intent0/dist/cli.js dashboard --dir apps/site",
+    "dashboard:example": "pnpm --filter intent0 build && node packages/intent0/dist/cli.js dashboard --dir examples/city-services"
   },
   "devDependencies": {
     "turbo": "^2.11.8",

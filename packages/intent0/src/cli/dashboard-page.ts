@@ -16,7 +16,7 @@ export function dashboardPage(): string {
 <body>
 <div class="app">
   <aside class="side">
-    <div class="brand"><span class="logo"></span>intent0<small>dashboard</small></div>
+    <div class="brand"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9"/><circle cx="16.5" cy="15" r="7"/><path d="M10.6 18.6 L8.4 24.6 L14.4 21.6 Z"/></svg>intent0<small>dashboard</small></div>
     <nav id="nav"></nav>
     <div class="side-foot" id="sideFoot"></div>
   </aside>
@@ -39,13 +39,13 @@ export function dashboardPage(): string {
 }
 
 const CSS = String.raw`
-:root{--bg:#f6f6f3;--card:#fff;--ink:#14151a;--muted:#62646e;--line:#e4e4df;--accent:#6d4aff;--accent-soft:#efeaff;--ok:#0f8a5f;--ok-soft:#e3f6ee;--warn:#a15c00;--warn-soft:#fff2dc;--bad:#c0262d;--bad-soft:#fde8e8;--radius:12px;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#0e0f13;--card:#16181e;--ink:#ecedf1;--muted:#9a9cab;--line:#272a33;--accent:#9b85ff;--accent-soft:#231d3d;--ok:#3ccf91;--ok-soft:#0f2b20;--warn:#f0b35a;--warn-soft:#2e2312;--bad:#ff7b7f;--bad-soft:#341719;color-scheme:dark}}
+:root{--bg:#f6f6f3;--card:#fff;--ink:#14171a;--muted:#5d6461;--line:#e4e4df;--accent:#173f35;--accent-soft:#e4efe9;--on-accent:#fff;--lamp:#f7941d;--ok:#0f8a5f;--ok-soft:#e3f6ee;--warn:#a15c00;--warn-soft:#fff2dc;--bad:#c0262d;--bad-soft:#fde8e8;--radius:12px;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0d0f0e;--card:#161a18;--ink:#eceeed;--muted:#9aa29e;--line:#272c2a;--accent:#f7941d;--accent-soft:#2e2414;--on-accent:#14171a;--lamp:#f7941d;--ok:#3ccf91;--ok-soft:#0f2b20;--warn:#f0b35a;--warn-soft:#2e2312;--bad:#ff7b7f;--bad-soft:#341719;color-scheme:dark}}
 *{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
 .side{border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;background:var(--card)}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;padding:0 8px}.brand small{font-weight:500;color:var(--muted);font-size:12px;margin-left:auto}
-.logo{width:22px;height:22px;border-radius:7px;background:var(--accent);position:relative}.logo:after{content:"";position:absolute;inset:6px;border:2.5px solid #fff;border-radius:50%}
+.logo{width:22px;height:22px;flex:none}.logo rect{fill:var(--accent)}.logo rect{fill:#173f35}.logo circle{fill:none;stroke:var(--lamp);stroke-width:3.2}.logo path{fill:var(--lamp)}
 nav{display:flex;flex-direction:column;gap:2px}nav button{all:unset;cursor:pointer;padding:8px 10px;border-radius:8px;color:var(--muted);display:flex;justify-content:space-between}
 nav button:hover{background:var(--bg);color:var(--ink)}nav button[aria-current=page]{background:var(--accent-soft);color:var(--accent);font-weight:600}
 nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -58,7 +58,7 @@ main{padding:28px clamp(16px,4vw,48px) 80px;max-width:1080px;width:100%}
 .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
 .stat b{display:block;font-size:28px;letter-spacing:-.02em;overflow-wrap:anywhere}.stat b.text{font-size:17px;line-height:1.3;padding:6px 0 4px}.stat span{color:var(--muted)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}
-button{font:inherit;border:0;border-radius:9px;padding:8px 14px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}button:disabled{opacity:.5;cursor:default}
+button{font:inherit;border:0;border-radius:9px;padding:8px 14px;background:var(--accent);color:var(--on-accent);font-weight:600;cursor:pointer}button:disabled{opacity:.5;cursor:default}
 button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}button.small{padding:5px 10px;font-size:13px}
 label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--muted)}
 input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%}
@@ -70,7 +70,7 @@ details{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}summar
 .fieldrow{display:grid;grid-template-columns:1.4fr .6fr 1.4fr auto;gap:8px;align-items:end;margin-top:8px}
 .switch{position:relative;width:40px;height:22px;flex:none}.switch input{opacity:0;width:0;height:0;position:absolute}
 .switch span{position:absolute;inset:0;background:var(--line);border-radius:99px;transition:.2s;cursor:pointer}.switch span:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s}
-.switch input:checked+span{background:var(--ok)}.switch input:checked+span:after{transform:translateX(18px)}.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.switch input:checked+span{background:var(--accent)}.switch input:checked+span:after{transform:translateX(18px);background:var(--on-accent)}.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
 .savebar{position:sticky;top:12px;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--ink);color:var(--bg);border-radius:var(--radius);padding:10px 12px 10px 16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .savebar button.ghost{color:var(--bg);border-color:rgba(255,255,255,.3)}
 .notice{border-radius:var(--radius);padding:12px 16px;margin-bottom:14px;background:var(--ok-soft);color:var(--ok)}.notice.bad{background:var(--bad-soft);color:var(--bad)}.notice ul{margin:6px 0 0;padding-left:18px}
