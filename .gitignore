@@ -16,3 +16,6 @@ next-env.d.ts
 # Local intent0 package builds
 packages/intent0/dist/
 *.tgz
+
+# design-taste-frontend working files
+.taste-skill/
