@@ -244,3 +244,8 @@
 - Built (Claude): apps/site now has the landing page, product video, docs (/docs, from content/docs), the Dashboard page (/dashboard, connects to `intent0 dashboard`) and "Ask this site" on intent0 itself. apps/web (19 Oct) deleted; `intent0 dashboard` now links to http://localhost:3000/dashboard (INTENT0_WEBSITE overrides).
 - Design (Claude's choice, open to change): government-form look (cool paper, navy ink, violet rubber-stamp accent, Schibsted Grotesk). Hero: 8 menu clicks swept into one sentence, the form builds, a RECEIVED stamp lands; answers get their source highlighted. Pauses off screen; reduced motion shows the finished state.
 - Verified: typecheck + 80 tests pass, site lint clean; browser at 1440 px and 375 px; the website's Dashboard connected to `intent0 dashboard` on examples/city-services; "Ask this site" answered from the docs without a model.
+
+## Dashboard access + black-and-white look — 2026-10-22
+- Learner ran `npx intent0 dashboard` and got npm E404. Claude explained (fact): `intent0` was never published to npm, so npx has nothing to download; locally the CLI runs from packages/intent0/dist. Added root scripts `pnpm dashboard:example` and `pnpm intent0 <command>`; `intent0 dashboard` now takes `--dir`. Publishing to npm is the learner's step.
+- Learner decided: colours = clean white and black (rejected navy/tangerine as "old" and electric blue); keep the historical photos. Claude proposed and built a new logo (zero as a speech bubble) — a proposal, not a learner decision.
+- Learner then rejected black and white: keep the previous palette, but replace the blue (navy) with any other colour. Claude chose deep pine green #173f35 (proposal); tangerine, white, near-black and photos unchanged.
