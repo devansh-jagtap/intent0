@@ -18,7 +18,7 @@ export function CopyButton({ text, className = "" }: { text: string; className?:
           /* clipboard unavailable */
         }
       }}
-      className={`grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg bg-night-2 text-night-ink transition hover:bg-[#2d4064] ${className}`}
+      className={`grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg bg-night-2 text-night-ink transition hover:bg-[#2c3330] ${className}`}
       aria-label={done ? "Copied" : "Copy"}
     >
       {done ? <Check className="size-4 text-[#7fdcab]" /> : <Copy className="size-4" />}

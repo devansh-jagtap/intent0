@@ -1,317 +1,402 @@
-import { Check, Play } from "lucide-react";
+import { Check } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
-import { HeroDemo } from "@/components/hero-demo";
-import { GithubIcon } from "@/components/logo";
-import { SetupTabs } from "@/components/setup-tabs";
+import { AgentExchange } from "@/components/home/agent-exchange";
+import { RequestBoard } from "@/components/home/request-board";
+import { Reveal } from "@/components/home/reveal";
+import { RulesBoard } from "@/components/home/rules-board";
 import { GITHUB } from "@/components/site-header";
+import { Button } from "@/components/ui/button";
+import { Marquee } from "@/components/ui/marquee";
+import "./home.css";
 
-const STEPS = [
-  {
-    title: "Read your code",
-    text: "npx intent0 init scans your routes and forms and maps them into user tasks: the fields, the order, and the endpoint each step calls.",
-  },
-  {
-    title: "Approve the tasks",
-    text: "You review every task in the terminal or the dashboard. Only approved, switched-on tasks are ever offered. Delete and cancel stay off until you turn them on.",
-  },
-  {
-    title: "Visitors say what they need",
-    text: "They press Ask this site (or Ctrl/⌘ K) and type or speak, in their own words and language. intent0 picks the matching task or finds the answer in your pages.",
-  },
-  {
-    title: "The right page, sent to your API",
-    text: "Step pages are built live in your site's look, checked before they're shown, and submitted to your own endpoints. If anything fails, the visitor lands on your original page.",
-  },
+/*
+ * intent0's home page is a switchboard: before menus, you told an operator what you needed and
+ * she connected you, but only to lines wired into the board. Every tile here is one such line.
+ * The photographs are real switchboards from public archives (credited in the footer); the
+ * product itself is shown as its own interface. Few words, room around them, and motion that
+ * shows what the product does.
+ */
+
+const STACKS = ["Next.js", "Express", "Laravel", "Django", "Flask", "Spring", "ASP.NET", "Go", "PHP", "Plain HTML"];
+
+const WORDMARK: { ch: string; h: number; bg: string; fg: string }[] = [
+  { ch: "i", h: 74, bg: "#ffffff", fg: "#173f35" },
+  { ch: "n", h: 92, bg: "#173f35", fg: "#ffffff" },
+  { ch: "t", h: 66, bg: "#f4f4f2", fg: "#173f35" },
+  { ch: "e", h: 100, bg: "#070908", fg: "#ffffff" },
+  { ch: "n", h: 80, bg: "#ffffff", fg: "#173f35" },
+  { ch: "t", h: 70, bg: "#173f35", fg: "#ffffff" },
+  { ch: "0", h: 96, bg: "#f7941d", fg: "#173f35" },
 ];
-
-const RULES = [
-  ["Only tasks you approved", "The model never invents a task, an endpoint or a field. Choices come from your manifest."],
-  ["No steps skipped", "OTP, verification and document steps stay in place, in the order your backend expects."],
-  ["Confirm before it's final", "Irreversible submits always ask the person first, in the browser and for agents."],
-  ["A safe way back", "If anything fails, the visitor lands on your original page for that task."],
-  ["Checked before shown", "Known components only, real endpoints only, cited content only, code only from your docs."],
-  ["Their details stay theirs", "The model sees the request, never form data. Remembered details stay in that browser tab."],
-];
-
-const FAQ = [
-  {
-    q: "Do I have to rebuild my website?",
-    a: "No. intent0 is a layer on top of the site you have. Your pages, backend, validation and logins stay exactly as they are; intent0 calls the same endpoints your forms already use.",
-  },
-  {
-    q: "Which AI models does it work with?",
-    a: "Any OpenAI-compatible API: Groq, NVIDIA, OpenAI, Ollama on your own machine, and others. You bring your own key; it stays in your server's environment and never reaches the browser. Without a key intent0 still works, with keyword matching and simple pages.",
-  },
-  {
-    q: "What does the model see?",
-    a: "The visitor's request sentence and your approved task list. Never the values people type into forms.",
-  },
-  {
-    q: "Can it answer questions, not just run tasks?",
-    a: "Yes. intent0 index builds Site Memory from your docs and pages. Answers may only use those sections, every statement is cited, and code is copied exactly. If something isn't on your site, it says so. Try it on this site: press Ask this site in the corner.",
-  },
-  {
-    q: "What about sites that aren't Next.js?",
-    a: "intent0 serve runs next to any backend (PHP, Express, Django, Flask, Spring, ASP.NET, Go, plain HTML) and your pages add one script tag. Backends need to answer with JSON.",
-  },
-];
-
-function Heading({ title, intro }: { title: string; intro?: string }) {
-  return (
-    <div className="max-w-[44rem]">
-      <h2 className="m-0 text-[clamp(32px,4.2vw,50px)] leading-[1.04] font-extrabold tracking-[-0.035em] text-balance">{title}</h2>
-      {intro && <p className="mt-4 mb-0 max-w-[60ch] text-[18px] text-pretty text-pencil">{intro}</p>}
-    </div>
-  );
-}
 
 export default function Home() {
   return (
-    <main>
-      {/* Hero */}
-      <section className="wrap grid items-center gap-12 pt-12 pb-20 sm:pt-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14 lg:pt-20 lg:pb-28">
-        <div>
-          <h1 className="m-0 text-[clamp(42px,5.2vw,74px)] leading-[0.98] font-black tracking-[-0.045em] text-balance">
-            Visitors say what they need. Your site builds the page.
+    <main className="home">
+      <Reveal />
+
+      {/* The first screen: the name, four links, the switchboard and one sentence. */}
+      <section id="top" className="shell board hero" aria-label="intent0">
+        <div className="tile name-band">
+          <h1 aria-label="intent0">
+            {"intent0".split("").map((ch, i) => (
+              <span key={i} aria-hidden style={{ animationDelay: `${i * 55}ms` }}>
+                {ch}
+              </span>
+            ))}
           </h1>
-          <p className="mt-6 mb-0 max-w-[34rem] text-[19px] leading-relaxed text-pretty text-pencil">
-            intent0 sits on top of the website you already have. One sentence becomes the right form or an answer with its source, using only tasks you
-            approved, sent to your own APIs. AI agents get the same safe path.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#video" className="btn">
-              <Play className="size-4 fill-current" /> Watch the 1-minute video
-            </a>
-            <Link href="/docs/getting-started" className="btn quiet">
-              Read the docs
-            </Link>
-          </div>
-          <div className="cmd mt-7">
-            <code>npx intent0 init</code>
-            <CopyButton text="npx intent0 init" />
+        </div>
+        <nav className="hero-links" aria-label="Main">
+          <a className="tile-link" href="#how">
+            How it works
+          </a>
+          <a className="tile-link" href="#agents">
+            AI agents
+          </a>
+          <Link className="tile-link" href="/docs/getting-started">
+            Docs
+          </Link>
+          <Link className="tile-link" href="/dashboard">
+            Dashboard
+          </Link>
+        </nav>
+        <div className="rail-left">
+          <figure className="tile photo m-0">
+            <Image
+              src="/pictures/victory-switchboard-1945.jpg"
+              alt="Operators in headsets at a switchboard, plugging cords into its jacks"
+              width={1280}
+              height={1640}
+              priority
+              sizes="(max-width: 1100px) 50vw, 16vw"
+            />
+            <figcaption>Switchboard, 1945</figcaption>
+          </figure>
+          <div className="tile">
+            <ul className="facts">
+              <li>Works on your existing site</li>
+              <li>Only tasks you approve</li>
+              <li>Answers cite your pages</li>
+              <li>Your model, your key</li>
+            </ul>
           </div>
         </div>
-        <HeroDemo />
+        <figure className="tile photo hero-centre m-0">
+          <Image
+            className="drift"
+            src="/pictures/bell-international-board.jpg"
+            alt="A long row of telephone operators at the Bell System international board, its lines labelled London, Paris and Bermuda"
+            width={1280}
+            height={1017}
+            priority
+            sizes="(max-width: 1100px) 100vw, 66vw"
+          />
+          <div className="statement">
+            <p>Visitors say what they need. Your site builds the page.</p>
+          </div>
+        </figure>
+        <div className="rail-right">
+          <div className="tile">One command to set up</div>
+          <div className="tile stone">Runs on your server</div>
+          <div className="tile navy">Open to AI agents</div>
+          <Link className="tile lamp tile-link grid content-between" href="/docs/getting-started">
+            <span className="s-lead font-bold">Set up intent0</span>
+            <span aria-hidden className="text-2xl">
+              ↗
+            </span>
+          </Link>
+        </div>
       </section>
 
-      {/* Video */}
-      <section id="video" className="border-t border-rule py-20 sm:py-28">
-        <div className="wrap">
-          <Heading title="See it on a real site" intro="A real recording on Riverton City Services, the fictional city website in the repository. One minute, no sound." />
-          <div className="mt-10 overflow-hidden rounded-[18px] border border-rule bg-night p-1.5 shadow-[0_30px_70px_-34px_rgba(21,35,61,0.5)]">
+      {/* Eight clicks, one sentence. */}
+      <section className="shell section" aria-labelledby="intro-title">
+        <div className="board intro" data-reveal>
+          <div className="tile night slogan">
+            <h2 id="intro-title">
+              Say it.
+              <br />
+              Get it.
+            </h2>
+          </div>
+          <div className="tile trail" data-ui role="img" aria-label="Five menus on a city website become one sentence">
+            <div className="trail-path">
+              <span>Residents</span>
+              <span>Utilities</span>
+              <span>Water &amp; sewer</span>
+              <span>New connection</span>
+              <span>Apply</span>
+            </div>
+            <div className="trail-ask">I just moved in and need water</div>
+            <p className="trail-count">
+              8 → 1 <small>clicks, then one sentence</small>
+            </p>
+          </div>
+          <figure className="tile photo m-0">
+            <Image
+              src="/pictures/operators-connect-calls-1950.jpg"
+              alt="Three operators connecting calls with patch cords at a switchboard"
+              width={1280}
+              height={1009}
+              sizes="(max-width: 760px) 100vw, 40vw"
+            />
+            <figcaption>Operators, 1950</figcaption>
+          </figure>
+        </div>
+        <div data-reveal>
+          <p className="intro-line">Operators connected you only to lines wired into the board. intent0 does the same for your website.</p>
+        </div>
+      </section>
+
+      {/* How it works: one bar, each stage as long as it takes. */}
+      <section id="how" className="shell section" aria-labelledby="how-title" data-reveal>
+        <div className="section-head">
+          <h2 id="how-title">Set up once. Then it runs.</h2>
+          <Button render={<Link href="/docs/getting-started" />} nativeButton={false} className="bg-ink">
+            Read the setup guide
+          </Button>
+        </div>
+        <div>
+          <div className="bar" data-ui>
+            <div className="bg-stone" style={{ flexGrow: 2 }}>
+              Two minutes
+            </div>
+            <div className="bg-ink text-white" style={{ flexGrow: 8 }}>
+              Ten minutes
+            </div>
+            <div className="bg-night text-white" style={{ flexGrow: 90 }}>
+              Every day after
+            </div>
+          </div>
+          <div className="bar-notes">
+            <p style={{ flexGrow: 2 }}>Run init</p>
+            <p style={{ flexGrow: 8 }}>Approve tasks</p>
+            <p style={{ flexGrow: 90 }}>People and agents ask</p>
+          </div>
+        </div>
+      </section>
+
+      {/* The request board: the one live thing. */}
+      <section className="shell section" aria-labelledby="requests-title">
+        <div className="requests" data-reveal>
+          <div className="section-head">
+            <h2 id="requests-title">Every request goes to a wired line</h2>
+            <p>Try it on Riverton, the example city.</p>
+          </div>
+          <RequestBoard />
+        </div>
+      </section>
+
+      <div className="shell">
+        <div className="marquee-band" aria-hidden>
+          <Marquee pauseOnHover className="items-center p-0 [--duration:40s] [--gap:0.5em]" repeat={3}>
+            <span>Say what you need</span>
+            <span className="lamp-dot" />
+            <span className="text-lamp">we connect the line</span>
+            <span className="lamp-dot" />
+          </Marquee>
+        </div>
+      </div>
+
+      {/* Close-ups of the interface, each doing its one thing. */}
+      <section className="shell section" aria-labelledby="closeups-title">
+        <div className="board closeups" data-reveal>
+          <div className="tile heading w6h2">
+            <h2 id="closeups-title">What visitors get</h2>
+            <p className="s-lead">The right page, in your site&apos;s look.</p>
+          </div>
+          <figure className="tile photo w6h4 m-0">
             <video
-              className="aspect-video w-full rounded-[13px] bg-black"
-              controls
+              autoPlay
+              muted
+              loop
               playsInline
               preload="metadata"
               poster="/media/poster.jpg"
-              controlsList="nodownload noremoteplayback"
-              disablePictureInPicture
+              aria-label="One minute of intent0 on Riverton City Services: a request becomes a form, a reference number and a cited answer"
             >
               <source src="/media/intent0.webm" type="video/webm" />
               <source src="/media/intent0.mp4" type="video/mp4" />
-              Your browser can&apos;t play this video.
             </video>
-          </div>
-          <p className="mt-4 mb-0 text-[15px] text-pencil">Recorded in keyword mode, without an AI model. With a model, details in the sentence are filled in for you.</p>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section id="how" className="border-t border-rule py-20 sm:py-28">
-        <div className="wrap grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-          <div className="lg:sticky lg:top-28 lg:self-start">
-            <Heading title="From your code to the right page" intro="Setup happens once, on your machine. After that, every request goes through the same checks." />
-          </div>
-          <ol className="steps">
-            {STEPS.map((s) => (
-              <li key={s.title}>
-                <h3 className="m-0 text-[22px] leading-tight font-bold tracking-[-0.015em]">{s.title}</h3>
-                <p className="mt-2 mb-0 max-w-[56ch] text-pencil">{s.text}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* What visitors get */}
-      <section className="border-t border-rule py-20 sm:py-28">
-        <div className="wrap">
-          <Heading title="Tasks done. Questions answered." />
-          <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-[18px] border border-rule bg-sheet p-6 sm:p-8">
-              <h3 className="m-0 text-[22px] font-bold">Tasks</h3>
-              <p className="mt-2 text-pencil">Apply, register, book, report, track. Guided step pages built for that request, submitted to your APIs, with a reference number at the end.</p>
-              <div className="mt-6 flex items-end justify-between gap-4 border-t border-dashed border-rule pt-5">
-                <div className="min-w-0 text-[15px]">
-                  <p className="m-0 text-pencil">“I just moved into a new house and need water”</p>
-                  <p className="mt-1 mb-0 font-semibold">Apply for a new water connection</p>
-                </div>
-                <div className="stamp shrink-0" aria-label="Received, reference WTR-2026-04101">
-                  <div className="text-[15px] font-black tracking-[0.08em] uppercase">Received</div>
-                  <div className="text-[11px] font-bold tabular-nums">WTR-2026-04101</div>
-                </div>
-              </div>
+            <figcaption>
+              Recorded on Riverton. <a href="/media/intent0.mp4">Watch the minute</a>
+            </figcaption>
+          </figure>
+          <div className="tile w3h2">
+            <div className="macro" data-ui aria-hidden>
+              <span className="keycap">Ctrl</span>
+              <span className="keycap press">K</span>
             </div>
-            <div className="rounded-[18px] border border-rule bg-sheet p-6 sm:p-8">
-              <h3 className="m-0 text-[22px] font-bold">Answers</h3>
-              <p className="mt-2 text-pencil">Questions answered only from your own docs and pages. Every statement cites its source, code is copied exactly, and a link takes them to the spot on the real page.</p>
-              <div className="mt-6 border-t border-dashed border-rule pt-5 text-[15px]">
-                <p className="m-0 text-pencil">“I rent my flat. What papers do I need?”</p>
-                <p className="mt-1 mb-0">
-                  <span className="bg-[linear-gradient(transparent_58%,rgba(86,49,214,0.2)_58%,rgba(86,49,214,0.2)_92%,transparent_92%)]">A signed letter from the owner and a copy of their photo ID.</span>
-                  <sup className="ml-0.5 font-bold text-stamp">1</sup>
-                </p>
-                <p className="mt-1 mb-0 text-[13px] break-all text-pencil">1. /help/water-connection-documents#if-you-rent</p>
-              </div>
+            <p className="caption">Ask from any page</p>
+          </div>
+          <div className="tile stone w3h2">
+            <div className="macro" data-ui aria-hidden>
+              <span className="toggle" />
             </div>
+            <p className="caption">Only tasks you switch on</p>
+          </div>
+          <div className="tile navy w3h4">
+            <div className="macro received" data-ui aria-hidden>
+              <span className="stamp">Received</span>
+              <span className="font-extrabold tracking-[-0.03em] whitespace-nowrap">WTR-2026-04101</span>
+            </div>
+            <p className="caption">A reference at the end</p>
+          </div>
+          <div className="tile w3h4">
+            <div className="macro cite leading-tight" data-ui aria-hidden>
+              A signed letter from the owner.<sup>1</sup>
+            </div>
+            <p className="caption">Every answer cited</p>
+          </div>
+          <div className="tile night w6h2">
+            <div className="macro otp" data-ui aria-hidden>
+              <span>4</span>
+              <span>8</span>
+              <span>2</span>
+              <span>9</span>
+              <span>1</span>
+              <span>7</span>
+            </div>
+            <p className="caption">Codes can&apos;t be skipped</p>
+          </div>
+          <div className="tile stone w6h2">
+            <div className="macro confirm" data-ui aria-hidden>
+              <span className="box">
+                <Check strokeWidth={3.2} />
+              </span>
+              I confirm these details are correct
+            </div>
+            <p className="caption">Final steps ask first</p>
           </div>
         </div>
       </section>
 
-      {/* Agents */}
-      <section id="agents" className="border-t border-rule py-20 sm:py-28">
-        <div className="wrap grid items-start gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-          <div>
-            <Heading
-              title="Ready for AI agents, without scraping"
-              intro="The same approved tasks and a site search become tools for AI agents: over MCP for Claude Desktop, Cursor and others, and WebMCP in the browser."
+      {/* AI agents. */}
+      <section id="agents" className="shell section" aria-labelledby="agents-title">
+        <div className="agents" data-reveal>
+          <div className="copy">
+            <h2 id="agents-title">Agents use the same lines</h2>
+            <p>Your approved tasks and a search of your pages, as tools for AI agents.</p>
+            <ul className="chips">
+              <li>Public tasks only</li>
+              <li>Asks, never guesses</li>
+              <li>Confirms anything final</li>
+              <li>/llms.txt for crawlers</li>
+            </ul>
+          </div>
+          <div className="exchange">
+            <AgentExchange />
+          </div>
+        </div>
+      </section>
+
+      {/* The stacks it runs on. */}
+      <section className="shell section" aria-labelledby="stack-title">
+        <div className="board stack" data-reveal>
+          <div className="tile navy">
+            <h2 id="stack-title">Runs on your stack</h2>
+          </div>
+          {STACKS.map((s) => (
+            <div key={s} className="tile">
+              {s}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* The rules, and the questions. */}
+      <section className="shell section" aria-labelledby="rules-title" data-reveal>
+        <div className="section-head">
+          <h2 id="rules-title">Your rules decide</h2>
+          <Button render={<Link href="/docs/rules" />} nativeButton={false} className="bg-ink">
+            Read every rule
+          </Button>
+        </div>
+        <RulesBoard />
+      </section>
+
+      {/* The action. */}
+      <div className="shell">
+        <section className="board cta" aria-labelledby="cta-title" data-reveal>
+          <figure className="tile photo m-0">
+            <Image
+              src="/pictures/salt-lake-exchange-1907.jpg"
+              alt="A long hall of operators at a new switchboard in Salt Lake City, 1907"
+              width={1024}
+              height={798}
+              sizes="(max-width: 760px) 50vw, 13vw"
             />
-            <dl className="mt-8 mb-0 grid gap-4">
-              {[
-                ["Public tasks only", "Tasks that need a signed-in person stay in the browser."],
-                ["Asks, never guesses", "Missing details come back as a list of what to ask the person."],
-                ["Confirmation for anything final", "Irreversible tasks need confirmed: true, after the person agrees."],
-                ["Over HTTP or on your machine", "Your running site answers at /intent0/mcp; intent0 mcp runs locally."],
-              ].map(([t, d]) => (
-                <div key={t}>
-                  <dt className="font-bold">{t}</dt>
-                  <dd className="m-0 text-pencil">{d}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-          <div className="overflow-hidden rounded-[18px] bg-night text-night-ink">
-            <div className="flex items-center justify-between gap-3 border-b border-night-2 px-5 py-3 text-[13px] text-night-muted">
-              <span>An agent reports a pothole on the example site</span>
-              <span className="text-[#7fdcab]">real result</span>
-            </div>
-            <pre className="m-0 overflow-x-auto p-5 text-[13.5px] leading-relaxed">
-              <span className="text-night-muted">{"// agent → your site: tools/call report_problem"}</span>
-              {"\n"}
-              {`{ "issueType": "pothole", "location": "14 Elm Street" }`}
-              {"\n\n"}
-              <span className="text-night-muted">{"// your site → agent"}</span>
-              {"\n"}
-              {`{
-  "status": "done",
-  "task": "report_problem",
-  "result": {
-    "referenceId": "RPT-2026-04102",
-    "status": "assigned to a crew"
-  }
-}`}
-            </pre>
-          </div>
-        </div>
-      </section>
-
-      {/* Dashboard */}
-      <section id="dashboard" className="border-t border-rule py-20 sm:py-28">
-        <div className="wrap">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <Heading
-              title="Stay in control, without editing JSON"
-              intro="npx intent0 dashboard opens a page on your own computer: turn tasks on or off, fix wording and endpoints, approve a new revision, rebuild Site Memory, change the model and see exactly what agents get."
-            />
-            <div className="flex shrink-0 flex-wrap gap-3">
-              <Link href="/dashboard" className="btn">
-                Open the dashboard
-              </Link>
-              <Link href="/docs/dashboard" className="btn quiet">
-                How it works
-              </Link>
+          </figure>
+          <div className="tile lamp action">
+            <h2 id="cta-title">Add intent0 to your site</h2>
+            <p>One command reads your code and shows you the tasks to approve.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="cmd-tile">
+                <code>npx intent0 init</code>
+                <CopyButton text="npx intent0 init" className="rounded-full bg-night-2" />
+              </span>
+              <Button render={<Link href="/docs/getting-started" />} nativeButton={false} className="bg-ink">
+                Getting started
+              </Button>
             </div>
           </div>
-          <div className="mt-10 overflow-hidden rounded-[18px] border border-rule bg-sheet p-1.5">
-            <Image src="/media/dashboard.png" alt="The intent0 dashboard showing the tasks of the example city website" width={2560} height={1600} className="h-auto w-full rounded-[13px]" />
-          </div>
-          <p className="mt-4 mb-0 max-w-[62ch] text-[15px] text-pencil">Your files and model key never leave your computer. This website&apos;s Dashboard page connects to it from your browser, with the link the command prints.</p>
-        </div>
-      </section>
+          <div className="tile navy" />
+        </section>
+      </div>
 
-      {/* Rules */}
-      <section className="bg-night py-20 text-night-ink sm:py-28">
-        <div className="wrap">
-          <div className="max-w-[44rem]">
-            <h2 className="m-0 text-[clamp(32px,4.2vw,50px)] leading-[1.04] font-extrabold tracking-[-0.035em] text-balance text-white">The rules intent0 can&apos;t break</h2>
-            <p className="mt-4 mb-0 text-[18px] text-night-muted">The model understands requests and arranges pages. Everything that matters is decided by rules in code.</p>
-          </div>
-          <ul className="mt-12 mb-0 grid list-none gap-x-12 gap-y-8 p-0 sm:grid-cols-2 lg:grid-cols-3">
-            {RULES.map(([t, d]) => (
-              <li key={t} className="grid grid-cols-[28px_minmax(0,1fr)] gap-x-3">
-                <span className="mt-0.5 grid size-6 place-items-center rounded-full border-2 border-[#a996ff] text-[#a996ff]">
-                  <Check className="size-3.5" strokeWidth={3} />
-                </span>
-                <div>
-                  <h3 className="m-0 text-[18px] font-bold text-white">{t}</h3>
-                  <p className="mt-1 mb-0 text-[15.5px] text-night-muted">{d}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* Get started */}
-      <section id="start" className="py-20 sm:py-28">
-        <div className="wrap">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <Heading title="Set up in minutes" intro="Pick where your site runs. Try it first on the example site: examples/city-services in the repository." />
-            <Link href="/docs/getting-started" className="btn quiet shrink-0 self-start lg:self-auto">
-              Full guide in the docs
-            </Link>
-          </div>
-          <div className="mt-10">
-            <SetupTabs />
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="border-t border-rule py-20 sm:py-28">
-        <div className="wrap grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-          <Heading title="Good to know" />
-          <div>
-            {FAQ.map(({ q, a }) => (
-              <details key={q} className="faq border-t border-rule py-5 last:border-b">
-                <summary className="flex items-center justify-between gap-4 text-[19px] font-bold">
-                  {q}
-                  <span className="plus grid size-8 shrink-0 place-items-center rounded-full border border-rule text-[20px] leading-none font-normal text-pencil">+</span>
-                </summary>
-                <p className="mt-3 mb-0 max-w-[62ch] text-pencil">{a}</p>
-              </details>
+      {/* The close: the name built from blocks. */}
+      <footer className="foot">
+        <div className="shell">
+          <div className="blocks" aria-label="intent0" data-reveal>
+            {WORDMARK.map((b, i) => (
+              <span key={i} style={{ height: `${b.h}%`, background: b.bg, color: b.fg }} aria-hidden>
+                {b.ch}
+              </span>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Closing */}
-      <section className="border-t border-rule py-24 sm:py-32">
-        <div className="wrap">
-          <h2 className="m-0 max-w-[14ch] text-[clamp(40px,6vw,76px)] leading-[0.98] font-black tracking-[-0.045em]">Make your website intent-driven.</h2>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Link href="/docs/getting-started" className="btn">
-              Get started
-            </Link>
-            <a href={GITHUB} className="btn quiet">
-              <GithubIcon className="size-4" /> View on GitHub
-            </a>
+          <div className="foot-links">
+            <div className="col">
+              <b>Product</b>
+              <a href="#how">How it works</a>
+              <a href="#agents">AI agents</a>
+              <Link href="/dashboard">Dashboard</Link>
+            </div>
+            <div className="col">
+              <b>Docs</b>
+              <Link href="/docs/getting-started">Getting started</Link>
+              <Link href="/docs/other-websites">Other websites</Link>
+              <Link href="/docs/rules">Rules</Link>
+            </div>
+            <div className="col">
+              <b>For machines</b>
+              <a href="/llms.txt">llms.txt</a>
+              <a href="/llms-full.txt">llms-full.txt</a>
+              <a href={GITHUB}>GitHub</a>
+            </div>
+            <div className="credits">
+              <b>Photographs, all public domain</b>
+              <a href="https://commons.wikimedia.org/wiki/File:Photograph_of_Women_Working_at_a_Bell_System_Telephone_Switchboard_(3660047829).jpg">
+                Bell System international switchboard, U.S. National Archives
+              </a>
+              <a href="https://commons.wikimedia.org/wiki/File:WAC_telephone_operators_operate_the_Victory_switchboard_during_the_Potsdam_Conference_in_their_headquarters_in..._-_NARA_-_199007.jpg">
+                Victory switchboard, Potsdam 1945, U.S. Army Signal Corps (NARA)
+              </a>
+              <a href="https://commons.wikimedia.org/wiki/File:JBER_telephone_operators_connect_calls,_people_120124-A-ZY202-001.jpg">
+                Fort Richardson operators, 1950, U.S. Army, David Bedard
+              </a>
+              <a href="https://commons.wikimedia.org/wiki/File:Telephone_switchboard_6_Oct_1907_Salt_Lake_City.jpg">
+                Salt Lake City exchange, 1907, The Salt Lake Herald
+              </a>
+            </div>
+          </div>
+          <div className="foot-last">
+            <p>© 2026 Devansh Jagtap. All rights reserved.</p>
+            <Button render={<a href="#top" />} nativeButton={false} className="bg-ink">
+              Back to the top
+            </Button>
           </div>
         </div>
-      </section>
+      </footer>
     </main>
   );
 }

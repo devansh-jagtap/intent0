@@ -15,8 +15,10 @@ const LINKS = [
 
 export function SiteHeader() {
   const path = usePathname();
+  // The home page is one board of tiles with its own links at the top.
+  if (path === "/") return null;
   return (
-    <header className="sticky top-0 z-40 border-b border-rule bg-paper/85 backdrop-blur-md">
+    <header className="sticky top-0 z-40 bg-paper-2">
       <nav className="wrap flex h-16 items-center justify-between gap-4" aria-label="Main">
         <Link href="/" aria-label="intent0 home" className="text-ink no-underline">
           <Logo size={28} />
@@ -32,7 +34,7 @@ export function SiteHeader() {
               {l.label}
             </Link>
           ))}
-          <a href={GITHUB} className="btn quiet small ml-1" aria-label="intent0 on GitHub">
+          <a href={GITHUB} className="btn small ml-1" aria-label="intent0 on GitHub">
             <GithubIcon className="size-4" />
             <span className="hidden sm:inline">GitHub</span>
           </a>

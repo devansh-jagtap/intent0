@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import { JetBrains_Mono, Schibsted_Grotesk } from "next/font/google";
 import { Intent0Bar } from "@/components/intent0-bar";
-import { Logo } from "@/components/logo";
 import { NoCopy } from "@/components/no-copy";
-import { GITHUB, SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
+import { cn } from "@/lib/utils";
 
 const sans = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-schibsted", weight: ["400", "500", "600", "700", "800", "900"] });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono-face" });
@@ -27,12 +27,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#edf1f5",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html lang="en" className={cn(sans.variable, mono.variable, "font-sans")}>
       <body>
         <NoCopy />
         {/* Rough edges for the rubber stamp's ink. */}
@@ -44,23 +44,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </svg>
         <SiteHeader />
         {children}
-        <footer className="border-t border-rule">
-          <div className="wrap flex flex-col gap-4 pt-10 pb-24 text-[15px] text-pencil sm:flex-row sm:items-center sm:justify-between">
-            <Logo size={22} />
-            <p className="m-0">© 2026 Devansh Jagtap. All rights reserved.</p>
-            <div className="flex gap-5">
-              <Link href="/docs/getting-started" className="text-pencil hover:text-ink">
-                Docs
-              </Link>
-              <Link href="/dashboard" className="text-pencil hover:text-ink">
-                Dashboard
-              </Link>
-              <a href={GITHUB} className="text-pencil hover:text-ink">
-                GitHub
-              </a>
-            </div>
-          </div>
-        </footer>
+        <SiteFooter />
         <Intent0Bar />
       </body>
     </html>
