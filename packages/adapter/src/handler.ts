@@ -121,7 +121,8 @@ export function createIntent0Handler({ manifest, memory = null, catalog = builti
     }
     // The whole how-to around what matched, so a guide isn't missing its other steps.
     const hits = expandHits(found, memory!);
-    const tasks = relatedTasks(query);
+    // The task the matching page is about is the natural next step (e.g. documents → apply).
+    const tasks = relatedTasks(query).length ? relatedTasks(query) : relatedTasks(found[0]!.page.title);
     const sources: ContentSources = { sections: {}, code: {} };
     for (const h of hits) {
       sources.sections[h.section.id] = { url: h.page.url, page: h.page.title, heading: h.section.path.join(" › "), ...(h.section.anchor ? { anchor: h.section.anchor } : {}) };
