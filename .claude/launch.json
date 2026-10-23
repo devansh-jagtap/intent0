@@ -10,6 +10,24 @@
         "dev"
       ],
       "port": 3000
+    },
+    {
+      "name": "riverton",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "examples/city-services/server.js"
+      ],
+      "port": 5050
+    },
+    {
+      "name": "riverton-intent0",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "../../packages/intent0/dist/cli.js",
+        "serve"
+      ],
+      "cwd": "examples/city-services",
+      "port": 4100
     }
   ]
 }

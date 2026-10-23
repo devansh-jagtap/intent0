@@ -96,7 +96,7 @@ createServer(async (req, res) => {
 
   // Static pages: /services/water → public/services/water.html
   let path = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, "");
-  if (path.endsWith("/")) path += "index";
+  if (/[/\\]$/.test(path)) path += "index"; // normalize() gives "\" on Windows
   if (!extname(path)) path += ".html";
   try {
     const file = await readFile(join(PUBLIC, path));
