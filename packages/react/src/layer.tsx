@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import {
   FlowError,
   buildRequest,
@@ -17,6 +17,7 @@ import {
 import { ComponentCatalog, ContentPage, Manifest, type Field, type PageSpec } from "@intent0/schema";
 import { resolveKit, type Intent0Kit } from "./kit";
 import { ContentView, FIELDS_PER_PART, FormView, boundFields, citationOrder, sourceHref, submitLabel, type Sources } from "./renderer";
+import { readSiteLook, type SiteLook } from "./site-look";
 import { INTENT0_CSS } from "./styles";
 import { registerBrowserTools } from "./webmcp";
 
@@ -98,15 +99,6 @@ function speechRecognition(): (new () => Recognizer) | undefined {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
 }
 
-/** Dark host page → dark layer. */
-function hostIsDark(): boolean {
-  for (const el of [document.body, document.documentElement]) {
-    const m = /rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+))?/.exec(getComputedStyle(el).backgroundColor);
-    if (m && (m[4] === undefined || Number(m[4]) > 0.5)) return 0.2126 * Number(m[1]) + 0.7152 * Number(m[2]) + 0.0722 * Number(m[3]) < 100;
-  }
-  return false;
-}
-
 async function postJson(url: string, body: unknown, signal?: AbortSignal) {
   const res = await fetch(url, { method: "POST", signal, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -148,7 +140,14 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
   const [canSpeak, setCanSpeak] = useState(false);
   const [listening, setListening] = useState(false);
   const [remembered, setRemembered] = useState(false);
-  const [dark, setDark] = useState(false);
+  const [look, setLook] = useState<SiteLook>();
+  // The generated page replaces the "generating" screen; between steps of a task it stays up.
+  const [hasPage, setHasPage] = useState(false);
+  const [genUntil, setGenUntil] = useState(0);
+  const [, setNow] = useState(0);
+  const [status, setStatus] = useState(0);
+  const [headerH, setHeaderH] = useState(0);
+  const scrollBefore = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -162,7 +161,6 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
         setConfig({ manifest: Manifest.parse(c.manifest), catalog: ComponentCatalog.parse(c.catalog), mode: c.mode, content: c.content ?? null }),
       )
       .catch((e) => console.error("[intent0] could not load config", e));
-    setDark(hostIsDark());
     setCanSpeak(Boolean(speechRecognition()));
     setRemembered(Object.keys(readRemembered()).length > 0);
   }, [endpoint]);
@@ -186,20 +184,45 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  // While the panel is over the site, the site behind it doesn't scroll. Focus moves into the
-  // panel on open and back to the launcher on close.
+  // While the layer is over the site, the site behind it doesn't scroll. The site's look is read
+  // fresh each time it opens. Focus moves into the layer on open and back to the launcher on close.
   useEffect(() => {
     if (open) {
+      setLook(readSiteLook());
       inputRef.current?.focus();
+      scrollBefore.current = window.scrollY;
       const before = document.documentElement.style.overflow;
       document.documentElement.style.overflow = "hidden";
       wasOpen.current = true;
       return () => {
         document.documentElement.style.overflow = before;
+        window.scrollTo({ top: scrollBefore.current });
       };
     }
     if (wasOpen.current) launcherRef.current?.focus();
   }, [open]);
+
+  // "Generating your experience" stays at least a moment, so the page arrives rather than flickers.
+  const holding = Date.now() < genUntil;
+  useEffect(() => {
+    const left = genUntil - Date.now();
+    if (left <= 0) return;
+    const t = setTimeout(() => setNow(Date.now()), left + 10);
+    return () => clearTimeout(t);
+  }, [genUntil, phase.kind]);
+  const view: "ask" | "gen" | "page" = phase.kind === "idle" ? "ask" : !hasPage && (phase.kind === "thinking" || holding) ? "gen" : "page";
+  useEffect(() => {
+    if (view !== "gen") return setStatus(0);
+    const t = setInterval(() => setStatus((n) => n + 1), 1300);
+    return () => clearInterval(t);
+  }, [view]);
+  // The page opens under the site's own header, so it reads as one of the site's pages.
+  useEffect(() => {
+    if (!open || view !== "page") return;
+    if (!hasPage) setHasPage(true);
+    window.scrollTo({ top: 0 });
+    setHeaderH(look ? look.chromeHeight() : 0);
+  }, [open, view, look, hasPage]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
@@ -233,7 +256,11 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
   async function begin(flowId: string, prefill: Record<string, unknown> = {}) {
     const flow = findFlow(manifest, flowId);
     if (!flow) return;
-    if (!asked) setAsked(flow.title);
+    setAsked((a) => a || flow.title);
+    if (phase.kind !== "step") {
+      setHasPage(false);
+      setGenUntil(Date.now() + 1400);
+    }
     setError(undefined);
     setFieldErrors({});
     // Details remembered in this tab fill the form first; what the visitor just said wins.
@@ -244,7 +271,7 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
 
   async function answer(query: string) {
     setRun(undefined);
-    setPhase({ kind: "thinking", label: "Looking through this site" });
+    setPhase({ kind: "thinking", label: "Finding the right pages" });
     try {
       const r = await postJson(`${endpoint}/answer`, { query, lang });
       if (!r.page) return setPhase({ kind: "notfound", message: typeof r.message === "string" ? r.message : "I couldn't find this on the website." });
@@ -286,7 +313,9 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
     setAsked(text);
     setError(undefined);
     setRun(undefined);
-    setPhase({ kind: "thinking", label: "Understanding what you need" });
+    setHasPage(false);
+    setGenUntil(Date.now() + 1800);
+    setPhase({ kind: "thinking", label: "Reading your request" });
     try {
       const r = await postJson(`${endpoint}/resolve`, { text });
       if (r.kind === "content" && typeof r.query === "string") await answer(r.query);
@@ -383,6 +412,9 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
     setRun(undefined);
     setError(undefined);
     setAsked("");
+    setText("");
+    setHasPage(false);
+    setTimeout(() => inputRef.current?.focus(), 0);
   }
 
   function forget() {
@@ -402,18 +434,21 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
 
   const content = phase.kind === "content" ? phase : null;
   const citeOrder = content ? citationOrder(content.page) : [];
-  const rail =
-    flow && flow.steps.length > 1 && (phase.kind === "step" || phase.kind === "done" || phase.kind === "thinking")
-      ? "steps"
-      : content && citeOrder.length
-        ? "sources"
-        : "none";
-
   const suggestions = manifest.flows.slice(0, 6);
-  const placeholder = manifest.flows.length ? `What do you want to do? For example, “${manifest.flows[0]!.title.toLowerCase()}”` : "What are you looking for?";
+  const siteName = manifest.site.name;
+  const placeholder = manifest.flows.length ? `For example, “${manifest.flows[0]!.title.toLowerCase()}”` : "Ask anything about this site";
+  const statusLines = [phase.kind === "thinking" ? phase.label : "Reading your request", "Finding the right pages", `Building your page in ${siteName}'s look`];
+
+  const closeButton = (
+    <button type="button" className="i0-x" onClick={() => setOpen(false)} aria-label="Close">
+      <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden>
+        <path d="M3.5 3.5l9 9m0-9-9 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    </button>
+  );
 
   return (
-    <div className="i0-layer" data-theme={dark ? "dark" : "light"}>
+    <div className="i0-layer" data-theme={look?.dark ? "dark" : "light"} style={look?.vars as CSSProperties}>
       <style>{INTENT0_CSS}</style>
       {!open && (
         <button
@@ -433,69 +468,64 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
         </button>
       )}
 
-      {open && <div className="i0-scrim" onClick={() => setOpen(false)} aria-hidden />}
       {open && (
         <div
-          className="i0-panel"
+          className="i0-screen"
+          data-view={view}
           role="dialog"
           aria-modal="true"
-          aria-label="Ask this site"
-          data-wide={phase.kind !== "idle" ? "" : undefined}
+          aria-label={view === "page" && content ? content.page.title : "Ask this site"}
+          style={view === "page" && headerH ? { top: headerH } : undefined}
           // Following a link to the site's own page (a cited source, the fallback) reveals the site.
           onClick={(e) => {
             const a = (e.target as HTMLElement).closest("a[href]");
             if (a && a.getAttribute("target") !== "_blank") setOpen(false);
           }}
         >
-          <div className="i0-panel-head">
-            <p className="i0-panel-title">Ask this site</p>
-            <button type="button" className="i0-x" onClick={() => setOpen(false)} aria-label="Close">
-              <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-                <path d="M3.5 3.5l9 9m0-9-9 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
-          <div className="i0-bar">
-            <form onSubmit={onIntent} className="i0-row" role="search">
-              <input
-                ref={inputRef}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={placeholder}
-                aria-label="What do you want to do?"
-                className="i0-intent"
-              />
-              {canSpeak && (
-                <button
-                  type="button"
-                  className="i0-mic"
-                  onClick={listen}
-                  data-on={listening ? "" : undefined}
-                  aria-label={listening ? "Listening…" : "Ask by voice"}
-                  title={listening ? "Listening…" : "Ask by voice"}
-                >
-                  <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden>
-                    <rect x="7" y="2.5" width="6" height="10" rx="3" fill="currentColor" />
-                    <path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                  </svg>
-                </button>
-              )}
-              <ui.Button type="submit" disabled={phase.kind === "thinking"}>
-                Ask
-              </ui.Button>
-            </form>
-          </div>
-
-          <div className="i0-scroll" ref={scrollRef}>
-            {phase.kind === "idle" && (
-              <div className="i0-idle">
+          {/* 1. Say what you need: one big question on a calm screen in the site's colours. */}
+          {view === "ask" && (
+            <div className="i0-ask">
+              <div className="i0-ask-top">
+                <span>{siteName}</span>
+                {closeButton}
+              </div>
+              <div className="i0-ask-main">
+                <h2 className="i0-ask-title">What do you need?</h2>
+                <form onSubmit={onIntent} className="i0-ask-row" role="search">
+                  <input
+                    ref={inputRef}
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder={placeholder}
+                    aria-label="What do you need?"
+                    className="i0-intent"
+                  />
+                  {canSpeak && (
+                    <button
+                      type="button"
+                      className="i0-mic"
+                      onClick={listen}
+                      data-on={listening ? "" : undefined}
+                      aria-label={listening ? "Listening…" : "Ask by voice"}
+                      title={listening ? "Listening…" : "Ask by voice"}
+                    >
+                      <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden>
+                        <rect x="7" y="2.5" width="6" height="10" rx="3" fill="currentColor" />
+                        <path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  )}
+                  <ui.Button type="submit" data-i0-primary="">
+                    Build my page
+                  </ui.Button>
+                </form>
                 {error && (
                   <p role="alert" className="i0-alert">
                     {error}
                   </p>
                 )}
                 {suggestions.length > 0 && (
-                  <>
+                  <div className="i0-ask-more">
                     <p className="i0-muted">Things you can do here</p>
                     <div className="i0-suggest">
                       {suggestions.map((f) => (
@@ -504,110 +534,93 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
                         </button>
                       ))}
                     </div>
-                  </>
+                  </div>
                 )}
-                {config.content && <p className="i0-muted">Or ask a question about anything on this site.</p>}
+                {config.content && <p className="i0-muted i0-ask-hint">Or ask anything about {siteName}. A page is built just for your question, from this site's own pages.</p>}
               </div>
-            )}
+            </div>
+          )}
 
-            {phase.kind !== "idle" && (
-              <div className="i0-sheet">
-                <div className="i0-asked">
-                  <p className="i0-asked-text">
-                    You asked: <q>{asked}</q>
-                  </p>
-                  <button type="button" onClick={clear} className="i0-link">
-                    Clear
+          {/* 2. Generating your experience: the screen goes dark while the page is made. */}
+          {view === "gen" && (
+            <div className="i0-gen" role="status" aria-live="polite">
+              <div className="i0-gen-art" aria-hidden>
+                <span />
+                <span />
+                <span />
+              </div>
+              <p className="i0-gen-title">Generating your experience</p>
+              <p className="i0-gen-status" key={status}>
+                {statusLines[status % statusLines.length]}
+              </p>
+              {asked && (
+                <p className="i0-gen-asked">
+                  <q>{asked}</q>
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* 3. The page made for this request, in the site's own look. */}
+          {view === "page" && (
+            <div className="i0-pageview" ref={scrollRef}>
+              <div className="i0-pagebar">
+                <p className="i0-pagebar-asked">
+                  Made for you: <q>{asked}</q>
+                </p>
+                <div className="i0-pagebar-actions">
+                  <button type="button" className="i0-quiet" onClick={clear}>
+                    New request
                   </button>
+                  {closeButton}
                 </div>
+              </div>
 
-                <div className="i0-body" data-rail={rail}>
-                  {rail === "steps" && flow && run && (
-                    <nav className="i0-rail" aria-label="Steps">
-                      <ol className="i0-steps">
-                        {flow.steps.map((s, i) => {
-                          const state = run.done || i < run.stepIndex ? "done" : i === run.stepIndex ? "current" : "todo";
-                          return (
-                            <li key={s.id} className="i0-step" data-state={state}>
-                              <span className="i0-step-n">{state === "done" ? "✓" : i + 1}</span>
-                              <span>{s.title}</span>
-                            </li>
-                          );
-                        })}
-                      </ol>
-                    </nav>
-                  )}
-                  {rail === "sources" && content && (
-                    <nav className="i0-rail" aria-label="Sources">
-                      <p style={{ marginBottom: 8 }}>From this site</p>
-                      <ol className="i0-sources">
-                        {citeOrder.map((id, i) => {
-                          const s = content.sources.sections[id];
-                          return s ? (
-                            <li key={id}>
-                              <a href={sourceHref(s)}>
-                                <span className="i0-src-n">{i + 1}</span>
-                                <span>{s.page}</span>
-                                <small>{s.heading}</small>
-                              </a>
-                            </li>
-                          ) : null;
-                        })}
-                      </ol>
-                    </nav>
-                  )}
+              <div className="i0-wrap" aria-live="polite">
+                {error && (
+                  <p role="alert" className="i0-alert">
+                    {error}
+                  </p>
+                )}
 
-                  <div className="i0-main" aria-live="polite">
-                    {error && (
-                      <p role="alert" className="i0-alert">
-                        {error}
-                      </p>
-                    )}
+                {phase.kind === "thinking" && (
+                  <p className="i0-thinking" role="status">
+                    <span className="i0-dot" aria-hidden /> {phase.label}…
+                  </p>
+                )}
 
-                    {phase.kind === "thinking" && (
-                      <div className="i0-gen" role="status">
-                        <p className="i0-gen-title">Generating your experience</p>
-                        <p className="i0-thinking">
-                          <span className="i0-dot" aria-hidden /> {phase.label}…
-                        </p>
-                        <div className="i0-skel" aria-hidden>
-                          <span style={{ width: "55%", height: 22 }} />
-                          <span style={{ width: "92%" }} />
-                          <span style={{ width: "84%" }} />
-                          <span style={{ width: "70%" }} />
-                          <span style={{ width: "100%", height: 72 }} />
-                        </div>
-                      </div>
-                    )}
+                {content && (
+                  <ContentView
+                    page={content.page}
+                    sources={content.sources}
+                    order={citeOrder}
+                    kit={ui}
+                    taskTitle={(id) => findFlow(manifest, id)?.title}
+                    onStartTask={(id) => begin(id)}
+                  />
+                )}
 
-                    {phase.kind === "nomatch" && (
-                      <div className="i0-section">
-                        <p className="i0-text">This website can't do that here. These are the things it can help with:</p>
-                        <div className="i0-suggest">
-                          {suggestions.map((f) => (
-                            <button key={f.id} type="button" className="i0-chip" onClick={() => begin(f.id)}>
-                              {f.title}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {phase.kind === "notfound" && <p className="i0-text">{phase.message} Try different words, or use the site's own menu.</p>}
-
-                    {content && (
-                      <ContentView
-                        page={content.page}
-                        sources={content.sources}
-                        order={citeOrder}
-                        kit={ui}
-                        taskTitle={(id) => findFlow(manifest, id)?.title}
-                        onStartTask={(id) => begin(id)}
-                      />
-                    )}
-
-                    {phase.kind === "step" && step && run && flow && (
-                      <form ref={formRef} onSubmit={onStepSubmit} className="i0-form" key={`${run.flowId}:${step.id}`} noValidate={!lastPart}>
+                {(phase.kind === "step" || (phase.kind === "thinking" && run && !run.done)) && step && run && flow && (
+                  <article className="i0-page">
+                    <header className="i0-hero">
+                      <h1 className="i0-title i0-in">{flow.title}</h1>
+                      {flow.description && <p className="i0-lead i0-in">{flow.description}</p>}
+                      {flow.steps.length > 1 && (
+                        <ol className="i0-flow-steps i0-in" aria-label="Steps">
+                          {flow.steps.map((s, i) => {
+                            const state = i < run.stepIndex ? "done" : i === run.stepIndex ? "current" : "todo";
+                            return (
+                              <li key={s.id} data-state={state}>
+                                <span className="i0-guide-n">{state === "done" ? "✓" : i + 1}</span>
+                                <span>{s.title}</span>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      )}
+                    </header>
+                    {phase.kind === "step" && (
+                      <form ref={formRef} onSubmit={onStepSubmit} className="i0-form i0-card i0-in" key={`${run.flowId}:${step.id}`} noValidate={!lastPart}>
                         <FormView
                           page={phase.page}
                           step={step}
@@ -626,20 +639,20 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
                         )}
                         <div className="i0-actions">
                           {lastPart ? (
-                            <ui.Button type="submit" disabled={busy}>
+                            <ui.Button type="submit" disabled={busy} data-i0-primary="">
                               {busy ? "Sending…" : submitLabel(phase.page)}
                             </ui.Button>
                           ) : (
-                            <ui.Button type="button" onClick={() => nextPart(parts)}>
+                            <ui.Button type="button" onClick={() => nextPart(parts)} data-i0-primary="">
                               Next
                             </ui.Button>
                           )}
                           {part > 0 ? (
-                            <button type="button" className="i0-link" onClick={() => setPart(part - 1)}>
+                            <button type="button" className="i0-quiet" onClick={() => setPart(part - 1)}>
                               Back
                             </button>
                           ) : run.stepIndex > 0 ? (
-                            <button type="button" className="i0-link" onClick={() => showStep(goBack(run))}>
+                            <button type="button" className="i0-quiet" onClick={() => showStep(goBack(run))}>
                               Back
                             </button>
                           ) : null}
@@ -651,47 +664,104 @@ export function Intent0Layer({ endpoint = "/intent0", kit, lang = "en" }: Intent
                         </div>
                       </form>
                     )}
+                  </article>
+                )}
 
-                    {phase.kind === "done" && run && flow && (
-                      <div className="i0-done">
-                        <p className="i0-ok">{flow.title}: done</p>
-                        {(flow.steps.at(-1)?.action?.returns ?? [])
-                          // Show simple values only (text, numbers); lists like a status history stay on the site's own pages.
-                          .filter((k) => ["string", "number"].includes(typeof run.outputs[k]))
-                          .map((k) => (
-                            <p key={k} className="i0-ref">
-                              <span className="i0-muted">{humanize(k)}</span>
-                              <b>{String(run.outputs[k])}</b>
-                            </p>
-                          ))}
-                        {flow.alsoNeed?.approved && (
-                          <div className="i0-also">
-                            <p className="i0-h3">You may also need</p>
-                            <p className="i0-text">{flow.alsoNeed.text}</p>
-                          </div>
-                        )}
+                {phase.kind === "done" && run && flow && (
+                  <article className="i0-page">
+                    <header className="i0-hero">
+                      <p className="i0-done-badge i0-in">
+                        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
+                          <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Done
+                      </p>
+                      <h1 className="i0-title i0-in">{flow.title}</h1>
+                    </header>
+                    <div className="i0-done i0-card i0-in">
+                      {(flow.steps.at(-1)?.action?.returns ?? [])
+                        // Show simple values only (text, numbers); lists like a status history stay on the site's own pages.
+                        .filter((k) => ["string", "number"].includes(typeof run.outputs[k]))
+                        .map((k) => (
+                          <p key={k} className="i0-ref">
+                            <span className="i0-muted">{humanize(k)}</span>
+                            <b>{String(run.outputs[k])}</b>
+                          </p>
+                        ))}
+                    </div>
+                    {flow.alsoNeed?.approved && (
+                      <div className="i0-also i0-in">
+                        <p className="i0-h3">You may also need</p>
+                        <p className="i0-text">{flow.alsoNeed.text}</p>
                       </div>
                     )}
+                  </article>
+                )}
 
-                    {phase.kind === "fallback" && (
-                      <p className="i0-text">
-                        This page couldn't be prepared ({phase.reason}). Taking you to the site's own page… <a href={phase.url}>Go now</a>
-                      </p>
-                    )}
-                  </div>
+                {phase.kind === "nomatch" && (
+                  <article className="i0-page">
+                    <header className="i0-hero">
+                      <h1 className="i0-title i0-in">This site can't do that here</h1>
+                      <p className="i0-lead i0-in">These are the things {siteName} can help with:</p>
+                    </header>
+                    <div className="i0-suggest i0-in">
+                      {suggestions.map((f) => (
+                        <button key={f.id} type="button" className="i0-chip" onClick={() => begin(f.id)}>
+                          {f.title}
+                        </button>
+                      ))}
+                    </div>
+                  </article>
+                )}
+
+                {phase.kind === "notfound" && (
+                  <article className="i0-page">
+                    <header className="i0-hero">
+                      <h1 className="i0-title i0-in">Nothing on {siteName} about this</h1>
+                      <p className="i0-lead i0-in">{phase.message} Try different words, or use the site's own menu.</p>
+                    </header>
+                  </article>
+                )}
+
+                {phase.kind === "fallback" && (
+                  <p className="i0-text">
+                    This page couldn't be prepared ({phase.reason}). Taking you to the site's own page… <a href={phase.url}>Go now</a>
+                  </p>
+                )}
+
+                {content && citeOrder.length > 0 && (
+                  <nav className="i0-sources i0-in" aria-label="Sources">
+                    <p className="i0-sources-title">Everything on this page comes from {siteName}</p>
+                    <ol>
+                      {citeOrder.map((id, i) => {
+                        const s = content.sources.sections[id];
+                        return s ? (
+                          <li key={id}>
+                            <a href={sourceHref(s)}>
+                              <span className="i0-src-n">{i + 1}</span>
+                              <span>
+                                {s.page}
+                                <small>{s.heading.split(" › ").slice(1).join(" › ") || s.heading}</small>
+                              </span>
+                            </a>
+                          </li>
+                        ) : null;
+                      })}
+                    </ol>
+                  </nav>
+                )}
+
+                <div className="i0-foot">
+                  <span>Built by intent0 for this request{config.mode === "mock" ? " (no AI model configured)" : ""}</span>
+                  {remembered && (
+                    <button type="button" className="i0-quiet" onClick={forget}>
+                      Forget my details
+                    </button>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-
-          <div className="i0-foot">
-            <span>Powered by intent0{config.mode === "mock" ? " (no AI model configured)" : ""}</span>
-            {remembered && (
-              <button type="button" className="i0-link" onClick={forget}>
-                Forget my details
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
