@@ -39,7 +39,7 @@ What intent0 writes into your project:
 
 ## Try it
 
-intent0 isn't published to npm yet. Build the package once in this repository:
+The first npm release is not published yet. Build a local package tarball from this repository:
 
 ```bash
 pnpm install
@@ -54,7 +54,9 @@ node server.js                                  # http://localhost:5050
 node ../../packages/intent0/dist/cli.js serve   # intent0 next to it
 ```
 
-### Next.js (App Router) websites
+After the first public npm release, install intent0 in your website with `npm install intent0`, then run `npx intent0 init`.
+
+Until then, use the local tarball for Next.js (App Router) websites:
 
 ```bash
 # in your website's folder
@@ -62,7 +64,7 @@ npm install /path/to/intent0/packages/intent0/intent0-0.0.1.tgz
 npx intent0 init
 ```
 
-### Any other website (PHP, Express, Django/Flask, Spring, ASP.NET, Go, plain HTML…)
+Until npm release, use the local tarball for any other website (PHP, Express, Django/Flask, Spring, ASP.NET, Go, plain HTML…):
 
 ```bash
 # in your website's folder
@@ -128,3 +130,4 @@ pnpm --filter @intent0/site dev         # the website (with docs and dashboard) 
 ## Licence
 
 Copyright © 2026 Devansh Jagtap. All rights reserved. The source is public to read; it may not be copied, modified or redistributed without written permission. See [LICENSE](LICENSE).
+
