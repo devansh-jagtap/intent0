@@ -2,6 +2,22 @@
   "name": "intent0",
   "version": "0.0.1",
   "description": "Add an intent bar to an existing website: users say what they want, intent0 builds the steps live from approved actions.",
+  "homepage": "https://github.com/devansh-jagtap/intent0#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devansh-jagtap/intent0.git",
+    "directory": "packages/intent0"
+  },
+  "bugs": {
+    "url": "https://github.com/devansh-jagtap/intent0/issues"
+  },
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "intent0": "./dist/cli.js"
@@ -22,7 +38,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "pack:local": "tsup && pnpm pack",
+    "pack:local": "pnpm pack",
+    "prepack": "pnpm build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
@@ -54,3 +71,4 @@
     }
   }
 }
+
