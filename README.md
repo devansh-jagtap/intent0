@@ -126,9 +126,18 @@ Agents get only public approved tasks (sign-in tasks stay in the browser), must 
 
 ## Publishing to npm
 
-The package is published from GitHub Actions. Before the first release, confirm the npm package name and version are available, choose the package's distribution license, and configure npm trusted publishing for this repository and `.github/workflows/publish-intent0.yml`.
+The first release needs an npm account with two-factor authentication and an available package name/version. Check availability with `npm view intent0`; a published version can never be reused. Intent0 uses The Unlicense, which dedicates the project to the public domain.
 
-Then open **Actions → Publish intent0 to npm → Run workflow** in GitHub. The workflow builds the package and publishes it to the public npm registry. Users can then install it with `npm install intent0` or run a command with `npx intent0`.
+Publish the first version interactively from the repository:
+
+```bash
+pnpm install --frozen-lockfile
+npm login
+cd packages/intent0
+npm publish --access public
+```
+
+After the package exists on npm, configure trusted publishing for `devansh-jagtap/intent0` and `.github/workflows/publish-intent0.yml`. Future versions can then be published through **GitHub Actions → Publish intent0 to npm → Run workflow**. Users install the released package with `npm install intent0` or run a command with `npx intent0`.
 
 ## Development
 
