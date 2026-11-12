@@ -54,7 +54,14 @@ node server.js                                  # http://localhost:5050
 node ../../packages/intent0/dist/cli.js serve   # intent0 next to it
 ```
 
-After the first public npm release, install intent0 in your website with `npm install intent0`, then run `npx intent0 init`.
+## Install from npm
+
+The first public release is not published yet. Once it is available, install intent0 in your website with npm and run the setup command:
+
+```bash
+npm install intent0
+npx intent0 init
+```
 
 Until then, use the local tarball for Next.js (App Router) websites:
 
@@ -117,9 +124,24 @@ Agents get only public approved tasks (sign-in tasks stay in the browser), must 
 | `apps/site` | The intent0 website (Next.js): landing page, product video and its source, docs (`content/docs/*.md`), the Dashboard page that connects to `intent0 dashboard`, and "Ask this site" running on intent0 itself |
 | `examples/city-services` | Riverton City Services: a fictional city website for trying intent0 without Next.js |
 
+## Publishing to npm
+
+The first release needs an npm account with two-factor authentication and an available package name/version. Check availability with `npm view intent0`; a published version can never be reused. Intent0 uses The Unlicense, which dedicates the project to the public domain.
+
+Publish the first version interactively from the repository:
+
+```bash
+pnpm install --frozen-lockfile
+npm login
+cd packages/intent0
+npm publish --access public
+```
+
+After the package exists on npm, configure trusted publishing for `devansh-jagtap/intent0` and `.github/workflows/publish-intent0.yml`. Future versions can then be published through **GitHub Actions → Publish intent0 to npm → Run workflow**. Users install the released package with `npm install intent0` or run a command with `npx intent0`.
+
 ## Development
 
-Requires Node 20+ and pnpm.
+The monorepo uses Node 20+ and pnpm for development. People installing the published CLI package use npm.
 
 ```bash
 pnpm install
@@ -129,5 +151,5 @@ pnpm --filter @intent0/site dev         # the website (with docs and dashboard) 
 
 ## Licence
 
-Copyright © 2026 Devansh Jagtap. All rights reserved. The source is public to read; it may not be copied, modified or redistributed without written permission. See [LICENSE](LICENSE).
+Intent0 is released under [The Unlicense](LICENSE), dedicating it to the public domain.
 
