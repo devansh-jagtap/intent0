@@ -1,155 +1,133 @@
-# intent0
+# Intent0
 
-**Make your website intent-driven.** Visitors and AI agents say what they want; intent0 builds the right page from the tasks you approved and sends it to your own APIs.
+### A simpler way to use the websites you already have.
 
-[![Watch the 1-minute video](apps/site/public/media/poster.jpg)](apps/site/public/media/intent0.mp4)
+Tell a website what you want to do. Intent0 turns its approved tasks and help content into a focused, guided experience—while the website keeps its own pages, APIs, and data.
 
-_A real recording on [Riverton City Services](examples/city-services), the fictional example site in this repository ([MP4](apps/site/public/media/intent0.mp4))._
+![Screenshot of the Intent0 dashboard reviewing approved website tasks](apps/site/public/media/dashboard.png)
 
-- **Tasks**: guided step pages for things the site can do (apply, register, book, report, track), submitted to the site's own APIs, using only tasks the company approved.
-- **Answers**: questions answered from the site's own content (docs, guides, help pages), with every statement cited and every code example copied exactly.
-- **AI agents**: the same approved tasks and content search as tools, over MCP (HTTP or stdio) and WebMCP in the browser.
+*The Intent0 dashboard lets a site owner review and control the tasks visitors can use.*
 
-Visitors press the **Ask this site** button in the bottom-right corner (or Ctrl/⌘ K) and type or speak what they want. While the page is built they see "Generating your experience"; then the generated page fills the screen over the site. Following a source link closes it and shows that spot on the real page.
+## What it does
 
-## How it works
+- **Guided tasks:** Visitors describe a goal—such as applying, booking, reporting, or tracking—and Intent0 builds a step-by-step flow from tasks the site owner has approved.
+- **Answers from site content:** Intent0 can answer questions using the site’s own docs and pages, with links back to the sources.
+- **AI agent tools:** The same approved tasks and site search can be offered to AI agents through MCP and WebMCP.
 
-1. **Read your code.** `intent0 init` scans your routes and forms and, with the model you choose, maps them into user tasks: fields, order, and the endpoint each step calls.
-2. **Approve the tasks.** You review them in the terminal or with `intent0 dashboard`. Only approved, enabled tasks are ever offered.
-3. **Visitors say what they want.** intent0 picks the matching task or answers from Site Memory.
-4. **The right page, sent to your API.** Step pages are built live, checked before they're shown, and submitted to your own endpoints. If anything fails, the visitor lands on your original page.
+Intent0 is designed to work with a site’s existing APIs. If a generated experience cannot be built or a request fails, visitors can return to the site’s original page.
 
-## Commands
+## Try the demo
 
-| Command | What it does |
-|---|---|
-| `intent0 init` | Reads your code, maps it into tasks (with your chosen model), asks you to approve them, builds Site Memory from your content, and adds the intent bar |
-| `intent0 dashboard` | A page on your own computer to turn tasks on/off, fix wording and endpoints, approve a new revision, rebuild Site Memory, change the model, see what agents get and try a request |
-| `intent0 index` | Rebuilds Site Memory (`intent0.memory.json`) from your Markdown/MDX docs and your running site's pages |
-| `intent0 approve` | Checks `intent0.manifest.json` after you edit it and marks it approved |
-| `intent0 serve` | The intent0 server for sites that aren't Next.js (port 4100); add `<script src="http://localhost:4100/intent0.js" defer></script>` to your pages |
-| `intent0 mcp` | Offers your site's public approved tasks and `search_site` to AI agents such as Claude Desktop or Cursor over stdio (`--dir <project>`, `--site <url>`) |
-
-What intent0 writes into your project:
-
-- `intent0.manifest.json`: the approved tasks (review it; only approved, enabled tasks are ever offered).
-- `intent0.memory.json`: Site Memory, your content split into sections with page links, topics and exact code blocks. Built without any model.
-- `.env.local`: your model settings and key (never sent to the browser or committed). Settings already in `.env` are used too.
-- Next.js only: `app/intent0/[action]/route.ts` and `components/intent0-bar.tsx`, added to your root layout.
-
-## Try it
-
-The first npm release is not published yet. Build a local package tarball from this repository:
+The Intent0 website runs the product on its own docs. Start it locally:
 
 ```bash
 pnpm install
-pnpm pack:intent0        # creates packages/intent0/intent0-0.0.1.tgz
+pnpm --filter @intent0/site dev
 ```
 
-The quickest way to see it is the example site, which needs no model key:
+Open [http://localhost:3000](http://localhost:3000) and choose **Ask this site**. The demo works without adding a model key.
+
+To open the local dashboard for the demo site, run:
 
 ```bash
-cd examples/city-services
-node server.js                                  # http://localhost:5050
-node ../../packages/intent0/dist/cli.js serve   # intent0 next to it
+pnpm dashboard
 ```
 
-## Install from npm
+## Install the CLI
 
-The first public release is not published yet. Once it is available, install intent0 in your website with npm and run the setup command:
+The package is named `intent0`. Once its first public npm release is available, install it in your project:
 
 ```bash
 npm install intent0
 npx intent0 init
 ```
 
-Until then, use the local tarball for Next.js (App Router) websites:
+The first public release is still being prepared. Until then, try the site demo above or build a local package from this repository:
 
 ```bash
-# in your website's folder
-npm install /path/to/intent0/packages/intent0/intent0-0.0.1.tgz
-npx intent0 init
+pnpm pack:intent0
 ```
 
-Until npm release, use the local tarball for any other website (PHP, Express, Django/Flask, Spring, ASP.NET, Go, plain HTML…):
+That creates a tarball under `packages/intent0`. For a Next.js App Router site, install the tarball and run `npx intent0 init`. For other sites, run the CLI with `npx --package=<path-to-tarball> intent0 init` and `npx --package=<path-to-tarball> intent0 serve`.
 
-```bash
-# in your website's folder
-npx --package=/path/to/intent0-0.0.1.tgz intent0 init
-npx --package=/path/to/intent0-0.0.1.tgz intent0 serve
-```
+## How setup works
 
-Then add the script tag to your pages (or shared layout/footer), before `</body>`. Options: `data-lang="hi"`, `data-accent="#0f766e"`, `data-mount="#some-element"`. Your backend needs to answer with JSON.
+1. Run `intent0 init` in your website project. It scans the project’s routes and forms and drafts possible tasks.
+2. Review and approve the tasks in the terminal or with `intent0 dashboard`.
+3. Intent0 adds the site integration and builds Site Memory from your content.
+4. Visitors ask in their own words. Intent0 presents a guided experience using only approved tasks and the site’s own endpoints.
 
-### Docs/content sites
+The site owner keeps control of which tasks are enabled, their wording, and the endpoints they call. The model does not receive visitors’ form values.
 
-A site with no forms (for example, a documentation site) works as an information assistant: `init` finds no tasks and only builds Site Memory. Ask "how do I set this up with Vue" and the page shows only the Vue guide, with its exact code.
+## Commands
 
-### AI agents (Claude Desktop, Cursor, …)
+| Command | Purpose |
+|---|---|
+| `intent0 init` | Scan a project, draft tasks, build Site Memory, and set up the integration |
+| `intent0 dashboard` | Review tasks, change wording and endpoints, approve revisions, and try requests |
+| `intent0 index` | Rebuild Site Memory from project docs and site pages |
+| `intent0 approve` | Validate the edited manifest and approve it |
+| `intent0 serve` | Run the Intent0 server for sites without the Next.js integration |
+| `intent0 mcp` | Make approved tasks and site search available to desktop agents over MCP |
 
-A running site answers MCP over HTTP at `/intent0/mcp` (Next.js route or `intent0 serve`). When you deploy, set `INTENT0_SITE_URL` to the site's live address so agents' task calls go there.
+For a non-Next.js site, `intent0 serve` provides the backend, while a script tag adds the browser interface. See the [integration guides](apps/site/content/docs) for setup details.
 
-For desktop agents that start their own servers, add intent0 to the agent's config:
+## AI agents
+
+A running site can expose approved public tasks and `search_site` over MCP. Signed-in tasks remain in the browser. Irreversible actions require explicit confirmation.
+
+For a desktop agent that starts its own MCP server, add a configuration like this and replace the directory and site URL:
 
 ```json
 {
   "mcpServers": {
     "my-site": {
       "command": "npx",
-      "args": ["intent0", "mcp", "--dir", "/path/to/your/site", "--site", "http://localhost:3000"]
+      "args": [
+        "intent0",
+        "mcp",
+        "--dir",
+        "/path/to/your/site",
+        "--site",
+        "http://localhost:3000"
+      ]
     }
   }
 }
 ```
 
-Agents get only public approved tasks (sign-in tasks stay in the browser), must send `confirmed: true` for irreversible ones after asking the person, and are told exactly which details are missing instead of guessing.
+## Safety and control
 
-## Rules intent0 always follows
-
-- Only approved, enabled tasks; destructive ones (delete, cancel) are disabled by default.
-- Required steps (OTP, verification) can't be skipped; irreversible submits need explicit confirmation.
-- Generated pages are checked before they're shown: known components only, real endpoints only, cited content only, code only from the site's docs.
-- If anything fails, the visitor goes to the site's own page for that task.
-- The model sees the visitor's request, never their form data. Details remembered for pre-filling stay in that browser tab.
+- Only approved, enabled tasks are offered; destructive tasks are disabled by default.
+- Required verification steps cannot be skipped.
+- Irreversible submissions require the visitor’s confirmation.
+- Generated interfaces use an allowlisted component set and are validated before display.
+- The model receives the visitor’s request, not the values they enter into forms.
+- If the guided experience fails, the original site remains available.
 
 ## Repository layout
 
-| Path | What it is |
+| Path | Contents |
 |---|---|
-| `packages/schema` | File formats (Zod): manifest, flows, pages, information pages, Site Memory |
-| `packages/core` | Deterministic logic: page and content validation, flow runner, search, agent tools, MCP server |
-| `packages/adapter` | Server part: intent understanding, page generation, information answers, search, MCP over HTTP |
-| `packages/react` | The intent bar and sheet (React), WebMCP tools |
-| `packages/intent0` | The installable package: CLI (incl. dashboard), `intent0/server`, `intent0/react`, script-tag build |
-| `apps/site` | The intent0 website (Next.js): landing page, product video and its source, docs (`content/docs/*.md`), the Dashboard page that connects to `intent0 dashboard`, and "Ask this site" running on intent0 itself |
-| `examples/city-services` | Riverton City Services: a fictional city website for trying intent0 without Next.js |
-
-## Publishing to npm
-
-The first release needs an npm account with two-factor authentication and an available package name/version. Check availability with `npm view intent0`; a published version can never be reused. Intent0 uses The Unlicense, which dedicates the project to the public domain.
-
-Publish the first version interactively from the repository:
-
-```bash
-pnpm install --frozen-lockfile
-npm login
-cd packages/intent0
-npm publish --access public
-```
-
-After the package exists on npm, configure trusted publishing for `devansh-jagtap/intent0` and `.github/workflows/publish-intent0.yml`. Future versions can then be published through **GitHub Actions → Publish intent0 to npm → Run workflow**. Users install the released package with `npm install intent0` or run a command with `npx intent0`.
+| `packages/schema` | Zod schemas for manifests, tasks, pages, and Site Memory |
+| `packages/core` | Flow state, validation, search, and agent tools |
+| `packages/adapter` | Intent handling, experience generation, and MCP over HTTP |
+| `packages/react` | Browser interface, page renderer, and WebMCP tools |
+| `packages/intent0` | CLI, server, React exports, and browser bundle |
+| `apps/site` | Product website, docs, demo, and dashboard |
+| `fixtures` | Example manifest used by the test suite |
 
 ## Development
 
-The monorepo uses Node 20+ and pnpm for development. People installing the published CLI package use npm.
+Requires Node.js 20 or newer and pnpm.
 
 ```bash
 pnpm install
-pnpm check                              # typecheck + tests for every package
-pnpm --filter @intent0/site dev         # the website (with docs and dashboard) on http://localhost:3000
+pnpm check
+pnpm --filter @intent0/site dev
 ```
 
-## Licence
+## License
 
-Intent0 is released under [The Unlicense](LICENSE), dedicating it to the public domain.
+Intent0 is released under [The Unlicense](LICENSE), dedicating the project to the public domain.
 
