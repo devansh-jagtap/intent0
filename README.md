@@ -142,5 +142,5 @@ pnpm --filter @intent0/site dev         # the website (with docs and dashboard) 
 
 ## Licence
 
-Copyright © 2026 Devansh Jagtap. All rights reserved. The source is public to read; it may not be copied, modified or redistributed without written permission. See [LICENSE](LICENSE).
+Intent0 is released under [The Unlicense](LICENSE), dedicating it to the public domain.
 
