@@ -54,7 +54,14 @@ node server.js                                  # http://localhost:5050
 node ../../packages/intent0/dist/cli.js serve   # intent0 next to it
 ```
 
-After the first public npm release, install intent0 in your website with `npm install intent0`, then run `npx intent0 init`.
+## Install from npm
+
+The first public release is not published yet. Once it is available, install intent0 in your website with npm and run the setup command:
+
+```bash
+npm install intent0
+npx intent0 init
+```
 
 Until then, use the local tarball for Next.js (App Router) websites:
 
@@ -117,9 +124,15 @@ Agents get only public approved tasks (sign-in tasks stay in the browser), must 
 | `apps/site` | The intent0 website (Next.js): landing page, product video and its source, docs (`content/docs/*.md`), the Dashboard page that connects to `intent0 dashboard`, and "Ask this site" running on intent0 itself |
 | `examples/city-services` | Riverton City Services: a fictional city website for trying intent0 without Next.js |
 
+## Publishing to npm
+
+The package is published from GitHub Actions. Before the first release, confirm the npm package name and version are available, choose the package's distribution license, and configure npm trusted publishing for this repository and `.github/workflows/publish-intent0.yml`.
+
+Then open **Actions → Publish intent0 to npm → Run workflow** in GitHub. The workflow builds the package and publishes it to the public npm registry. Users can then install it with `npm install intent0` or run a command with `npx intent0`.
+
 ## Development
 
-Requires Node 20+ and pnpm.
+The monorepo uses Node 20+ and pnpm for development. People installing the published CLI package use npm.
 
 ```bash
 pnpm install
