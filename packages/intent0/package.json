@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/devansh-jagtap/intent0/issues"
   },
-  "license": "UNLICENSED",
+  "license": "Unlicense",
   "engines": {
     "node": ">=20"
   },
@@ -71,4 +71,3 @@
     }
   }
 }
-
